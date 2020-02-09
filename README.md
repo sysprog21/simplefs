@@ -11,18 +11,54 @@ The super block operations are set at the time of mounting. The operation tables
 * Regular files: create, remove, read/write (through page cache), rename;
 * No extended attribute support
 
+## Prerequisite
+
+Install linux kernel header in advance.
+```shell
+$ sudo apt install linux-headers-$(uname -r)
+```
+
 ## Build and Run
 
 You can build the kernel module and tool with `make`.
 Generate test image via `make test.img`, which creates a zeroed file of 50 MiB.
 
 You can then mount this image on a system with the simplefs kernel module installed.
+Let's test kernel module:
 ```shell
-sudo insmod simplefs.ko
-mkdir -p test
-sudo mount -o loop -t simplefs test.img test
-sudo umount test
-sudo rmmod simplefs
+$ sudo insmod simplefs.ko
+```
+
+Correspoinding kernel message:
+```
+simplefs: module loaded
+```
+
+Generate test image by creating a zeroed file of 50 MiB. We can then mount
+this image on a system with the simplefs kernel module installed.
+```shell
+$ mkdir -p test
+$ dd if=/dev/zero of=test.img bs=1M count=50
+$ sudo mount -o loop -t simplefs test.img test
+```
+
+You shall get the following kernel messages:
+```
+simplefs: '/dev/loop?' mount success
+```
+Here `/dev/loop?` might be `loop1`, `loop2`, `loop3`, etc.
+
+Perform regular file system operations: (as root)
+```shell
+$ echo "Hello World" > test/hello
+$ cat test/hello
+$ ls -lR
+```
+
+Remove kernel mount point and module:
+```shell
+$ sudo umount test
+$ sudo rmmod simplefs
 ```
 
 ## Design
