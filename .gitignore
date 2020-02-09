@@ -51,6 +51,8 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+.cache.mk
+*.o.ur-safe
 
 # Other
 test.img
