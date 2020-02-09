@@ -31,9 +31,9 @@ At present, simplefs only provides straightforward features.
 
 ### Partition layout
 ```
-    +------------+-------------+-------------------+-------------------+-------------+
-    | superblock | inode store | inode free bitmap | block free bitmap | data blocks |
-    +------------+-------------+-------------------+-------------------+-------------+
++------------+-------------+-------------------+-------------------+-------------+
+| superblock | inode store | inode free bitmap | block free bitmap | data blocks |
++------------+-------------+-------------------+-------------------+-------------+
 ```
 Each block is 4 KiB large.
 
@@ -58,12 +58,12 @@ Contains all the inodes of the partition. The maximum number of inodes is equal 
                                       +-----------+
   ```
   - for a file: the list of blocks containing the actual data of this file. Since block IDs are stored as 32-bit values, at most 1024 links fit in a single block, limiting the size of a file to 4 MiB.
-  ````
+  ```
   inode                                                block 94
   +-----------------------+                           +--------+
   | i_mode = IFDIR | 0644 |          block 93         |        |    block 99
-  | index_block =93 ----|-------->  +---------+       |        |   +--------+
-  | i_size = 10 KiB        |      0 | 94   ---|-----> +--------+   |        |
+  | index_block = 93  ----|------>  +---------+       |        |   +--------+
+  | i_size = 10 KiB       |       0 | 94   ---|-----> +--------+   |        |
   | i_blockcs = 4         |         |---------|                    |        |
   +-----------------------+       1 | 99   ---|------------------> +--------+
                                     |---------|
@@ -76,6 +76,7 @@ Contains all the inodes of the partition. The maximum number of inodes is equal 
   ```
 
 ## TODO
+
 - support for extents
 - hard/symbolic link
 - journalling support
