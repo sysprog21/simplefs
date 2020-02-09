@@ -6,9 +6,7 @@
 
 #include "simplefs.h"
 
-/*
- * Mount a simplefs partition
- */
+/* Mount a simplefs partition */
 struct dentry *simplefs_mount(struct file_system_type *fs_type,
                               int flags,
                               const char *dev_name,
@@ -24,9 +22,7 @@ struct dentry *simplefs_mount(struct file_system_type *fs_type,
     return dentry;
 }
 
-/*
- * Unmount a simplefs partition
- */
+/* Unmount a simplefs partition */
 void simplefs_kill_sb(struct super_block *sb)
 {
     kill_block_super(sb);

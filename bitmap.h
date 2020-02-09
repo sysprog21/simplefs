@@ -47,9 +47,7 @@ static inline uint32_t get_free_block(struct simplefs_sb_info *sbi)
     return ret;
 }
 
-/*
- * Mark the i-th bit in freemap as free (i.e. 1)
- */
+/* Mark the i-th bit in freemap as free (i.e. 1) */
 static inline int put_free_bit(unsigned long *freemap,
                                unsigned long size,
                                uint32_t i)
@@ -63,9 +61,7 @@ static inline int put_free_bit(unsigned long *freemap,
     return 0;
 }
 
-/*
- * Mark an inode as unused.
- */
+/* Mark an inode as unused */
 static inline void put_inode(struct simplefs_sb_info *sbi, uint32_t ino)
 {
     if (put_free_bit(sbi->ifree_bitmap, sbi->nr_inodes, ino))
@@ -74,9 +70,7 @@ static inline void put_inode(struct simplefs_sb_info *sbi, uint32_t ino)
     sbi->nr_free_inodes++;
 }
 
-/*
- * Mark a block as unused.
- */
+/* Mark a block as unused */
 static inline void put_block(struct simplefs_sb_info *sbi, uint32_t bno)
 {
     if (put_free_bit(sbi->bfree_bitmap, sbi->nr_blocks, bno))

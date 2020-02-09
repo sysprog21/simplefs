@@ -31,6 +31,7 @@ static struct inode *simplefs_alloc_inode(struct super_block *sb)
         kmem_cache_alloc(simplefs_inode_cache, GFP_KERNEL);
     if (!ci)
         return NULL;
+
     inode_init_once(&ci->vfs_inode);
     return &ci->vfs_inode;
 }
@@ -59,6 +60,7 @@ static int simplefs_write_inode(struct inode *inode,
     bh = sb_bread(sb, inode_block);
     if (!bh)
         return -EIO;
+
     disk_inode = (struct simplefs_inode *) bh->b_data;
     disk_inode += inode_shift;
 
@@ -101,6 +103,7 @@ static int simplefs_sync_fs(struct super_block *sb, int wait)
     struct buffer_head *bh = sb_bread(sb, 0);
     if (!bh)
         return -EIO;
+
     disk_sb = (struct simplefs_sb_info *) bh->b_data;
 
     disk_sb->nr_blocks = sbi->nr_blocks;
@@ -198,6 +201,7 @@ int simplefs_fill_super(struct super_block *sb, void *data, int silent)
     bh = sb_bread(sb, SIMPLEFS_SB_BLOCK_NR);
     if (!bh)
         return -EIO;
+
     csb = (struct simplefs_sb_info *) bh->b_data;
 
     /* Check magic number */
@@ -213,6 +217,7 @@ int simplefs_fill_super(struct super_block *sb, void *data, int silent)
         ret = -ENOMEM;
         goto release;
     }
+
     sbi->nr_blocks = csb->nr_blocks;
     sbi->nr_inodes = csb->nr_inodes;
     sbi->nr_istore_blocks = csb->nr_istore_blocks;
@@ -231,6 +236,7 @@ int simplefs_fill_super(struct super_block *sb, void *data, int silent)
         ret = -ENOMEM;
         goto free_sbi;
     }
+
     for (i = 0; i < sbi->nr_ifree_blocks; i++) {
         int idx = sbi->nr_istore_blocks + i + 1;
 
@@ -253,6 +259,7 @@ int simplefs_fill_super(struct super_block *sb, void *data, int silent)
         ret = -ENOMEM;
         goto free_ifree;
     }
+
     for (i = 0; i < sbi->nr_bfree_blocks; i++) {
         int idx = sbi->nr_istore_blocks + sbi->nr_ifree_blocks + i + 1;
 

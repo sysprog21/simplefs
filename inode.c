@@ -10,9 +10,7 @@
 
 static const struct inode_operations simplefs_inode_ops;
 
-/*
- * Get inode ino from disk.
- */
+/* Get inode ino from disk */
 struct inode *simplefs_iget(struct super_block *sb, unsigned long ino)
 {
     struct inode *inode = NULL;
@@ -135,9 +133,7 @@ static struct dentry *simplefs_lookup(struct inode *dir,
     return NULL;
 }
 
-/*
- * Create a new inode in dir.
- */
+/* Create a new inode in dir */
 static struct inode *simplefs_new_inode(struct inode *dir, mode_t mode)
 {
     struct inode *inode;
