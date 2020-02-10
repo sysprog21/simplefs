@@ -13,17 +13,6 @@ struct superblock {
     char padding[4064]; /* Padding to match block size */
 };
 
-struct simplefs_file_index_block {
-    uint32_t blocks[SIMPLEFS_BLOCK_SIZE >> 2];
-};
-
-struct simplefs_dir_block {
-    struct simplefs_file {
-        uint32_t inode;
-        char filename[SIMPLEFS_FILENAME_LEN];
-    } files[SIMPLEFS_MAX_SUBFILES];
-};
-
 /* Returns ceil(a/b) */
 static inline uint32_t idiv_ceil(uint32_t a, uint32_t b)
 {
