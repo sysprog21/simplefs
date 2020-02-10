@@ -12,7 +12,7 @@ IMAGE ?= test.img
 IMAGESIZE ?= 50
 
 $(MKFS): mkfs.c
-	$(CC) -Wall -o $@ $<
+	$(CC) -std=gnu99 -Wall -o $@ $<
 
 $(IMAGE): $(MKFS)
 	dd if=/dev/zero of=${IMAGE} bs=1M count=${IMAGESIZE}
