@@ -39,6 +39,7 @@ this image on a system with the simplefs kernel module installed.
 ```shell
 $ mkdir -p test
 $ dd if=/dev/zero of=test.img bs=1M count=50
+$ ./mkfs.simplefs test.img
 $ sudo mount -o loop -t simplefs test.img test
 ```
 
