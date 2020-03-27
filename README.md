@@ -115,7 +115,6 @@ Contains all the inodes of the partition. The maximum number of inodes is equal 
 ## TODO
 
 - support for extents
-- hard/symbolic link
 - journalling support
 
 ## License

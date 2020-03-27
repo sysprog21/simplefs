@@ -38,6 +38,7 @@ struct simplefs_inode {
     uint32_t i_blocks;    /* Block count */
     uint32_t i_nlink;     /* Hard links count */
     uint32_t index_block; /* Block with list of blocks for this file */
+    char i_data[32];      /* store symlink content */
 };
 
 #define SIMPLEFS_INODES_PER_BLOCK \
@@ -66,6 +67,7 @@ struct simplefs_sb_info {
 
 struct simplefs_inode_info {
     uint32_t index_block;
+    char i_data[32];
     struct inode vfs_inode;
 };
 
