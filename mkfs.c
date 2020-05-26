@@ -32,7 +32,7 @@ static struct superblock *write_superblock(int fd, struct stat *fstats)
     uint32_t nr_inodes = nr_blocks;
     uint32_t mod = nr_inodes % SIMPLEFS_INODES_PER_BLOCK;
     if (mod)
-        nr_inodes += mod;
+        nr_inodes += SIMPLEFS_INODES_PER_BLOCK - mod;
     uint32_t nr_istore_blocks = idiv_ceil(nr_inodes, SIMPLEFS_INODES_PER_BLOCK);
     uint32_t nr_ifree_blocks = idiv_ceil(nr_inodes, SIMPLEFS_BLOCK_SIZE * 8);
     uint32_t nr_bfree_blocks = idiv_ceil(nr_blocks, SIMPLEFS_BLOCK_SIZE * 8);
