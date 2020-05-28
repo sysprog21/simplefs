@@ -9,6 +9,7 @@
 #include "simplefs.h"
 
 static const struct inode_operations simplefs_inode_ops;
+static const struct inode_operations symlink_inode_ops;
 
 /* Get inode ino from disk */
 struct inode *simplefs_iget(struct super_block *sb, unsigned long ino)
@@ -69,6 +70,10 @@ struct inode *simplefs_iget(struct super_block *sb, unsigned long ino)
     } else if (S_ISREG(inode->i_mode)) {
         inode->i_fop = &simplefs_file_ops;
         inode->i_mapping->a_ops = &simplefs_aops;
+    } else if (S_ISLNK(inode->i_mode)) {
+        strncpy(ci->i_data, cinode->i_data, sizeof(ci->i_data));
+        inode->i_link = ci->i_data;
+        inode->i_op = &symlink_inode_ops;
     }
 
     brelse(bh);
@@ -144,9 +149,9 @@ static struct inode *simplefs_new_inode(struct inode *dir, mode_t mode)
     int ret;
 
     /* Check mode before doing anything to avoid undoing everything */
-    if (!S_ISDIR(mode) && !S_ISREG(mode)) {
+    if (!S_ISDIR(mode) && !S_ISREG(mode) && !S_ISLNK(mode)) {
         pr_err(
-            "File type not supported (only directory and regular files "
+            "File type not supported (only directory, regular file and symlink "
             "supported)\n");
         return ERR_PTR(-EINVAL);
     }
@@ -167,6 +172,15 @@ static struct inode *simplefs_new_inode(struct inode *dir, mode_t mode)
         ret = PTR_ERR(inode);
         goto put_ino;
     }
+
+    if (S_ISLNK(mode)) {
+        inode_init_owner(inode, dir, mode);
+        set_nlink(inode, 1);
+        inode->i_ctime = inode->i_atime = inode->i_mtime = current_time(inode);
+        inode->i_op = &symlink_inode_ops;
+        return inode;
+    }
+
     ci = SIMPLEFS_INODE(inode);
 
     /* Get a free block for this new inode's index */
@@ -312,7 +326,7 @@ static int simplefs_unlink(struct inode *dir, struct dentry *dentry)
     int i, f_id = -1, nr_subs = 0;
 
     uint32_t ino = inode->i_ino;
-    uint32_t bno = SIMPLEFS_INODE(inode)->index_block;
+    uint32_t bno = 0;
 
     /* Read parent directory index */
     bh = sb_bread(sb, SIMPLEFS_INODE(dir)->index_block);
@@ -322,7 +336,8 @@ static int simplefs_unlink(struct inode *dir, struct dentry *dentry)
 
     /* Search for inode in parent index and get number of subfiles */
     for (i = 0; i < SIMPLEFS_MAX_SUBFILES; i++) {
-        if (dir_block->files[i].inode == ino)
+        if (strncmp(dir_block->files[i].filename, dentry->d_name.name,
+                    SIMPLEFS_FILENAME_LEN) == 0)
             f_id = i;
         else if (dir_block->files[i].inode == 0)
             break;
@@ -337,11 +352,19 @@ static int simplefs_unlink(struct inode *dir, struct dentry *dentry)
     mark_buffer_dirty(bh);
     brelse(bh);
 
+    if (S_ISLNK(inode->i_mode))
+        goto clean_inode;
+
     /* Update inode stats */
     dir->i_mtime = dir->i_atime = dir->i_ctime = current_time(dir);
     if (S_ISDIR(inode->i_mode))
         inode_dec_link_count(dir);
     mark_inode_dirty(dir);
+
+    if (inode->i_nlink > 1) {
+        inode_dec_link_count(inode);
+        return 0;
+    }
 
     /*
      * Cleanup pointed blocks if unlinking a file. If we fail to read the
@@ -349,6 +372,7 @@ static int simplefs_unlink(struct inode *dir, struct dentry *dentry)
      * forever. If we fail to scrub a data block, don't fail (too late
      * anyway), just put the block and continue.
      */
+    bno = SIMPLEFS_INODE(inode)->index_block;
     bh = sb_bread(sb, bno);
     if (!bh)
         goto clean_inode;
@@ -533,6 +557,105 @@ static int simplefs_rmdir(struct inode *dir, struct dentry *dentry)
     return simplefs_unlink(dir, dentry);
 }
 
+static int simplefs_link(struct dentry *old_dentry,
+                         struct inode *dir,
+                         struct dentry *dentry)
+{
+    struct inode *inode = d_inode(old_dentry);
+    struct super_block *sb = inode->i_sb;
+    struct simplefs_inode_info *ci_dir = SIMPLEFS_INODE(dir);
+    struct simplefs_dir_block *dir_block;
+    struct buffer_head *bh;
+    int f_pos = -1, ret = 0, i = 0;
+
+    bh = sb_bread(sb, ci_dir->index_block);
+    if (!bh)
+        return -EIO;
+    dir_block = (struct simplefs_dir_block *) bh->b_data;
+
+    if (dir_block->files[SIMPLEFS_MAX_SUBFILES - 1].inode != 0) {
+        ret = -EMLINK;
+        printk(KERN_INFO "directory is full");
+        goto end;
+    }
+
+    for (i = 0; i < SIMPLEFS_MAX_SUBFILES; i++) {
+        if (dir_block->files[i].inode == 0) {
+            f_pos = i;
+            break;
+        }
+    }
+
+    dir_block->files[f_pos].inode = inode->i_ino;
+    strncpy(dir_block->files[f_pos].filename, dentry->d_name.name,
+            SIMPLEFS_FILENAME_LEN);
+    mark_buffer_dirty(bh);
+
+    inode_inc_link_count(inode);
+    d_instantiate(dentry, inode);
+end:
+    brelse(bh);
+    return ret;
+}
+
+static int simplefs_symlink(struct inode *dir,
+                            struct dentry *dentry,
+                            const char *symname)
+{
+    struct super_block *sb = dir->i_sb;
+    unsigned int l = strlen(symname) + 1;
+    struct inode *inode = simplefs_new_inode(dir, S_IFLNK | S_IRWXUGO);
+    struct simplefs_inode_info *ci = SIMPLEFS_INODE(inode);
+    struct simplefs_inode_info *ci_dir = SIMPLEFS_INODE(dir);
+    struct simplefs_dir_block *dir_block;
+    struct buffer_head *bh;
+    int f_pos = 0, i = 0;
+
+    /* Check if symlink content is not too long */
+    if (l > sizeof(ci->i_data))
+        return -ENAMETOOLONG;
+
+    /* fill directory data block */
+    bh = sb_bread(sb, ci_dir->index_block);
+
+    if (!bh)
+        return -EIO;
+    dir_block = (struct simplefs_dir_block *) bh->b_data;
+
+    if (dir_block->files[SIMPLEFS_MAX_SUBFILES - 1].inode != 0) {
+        printk(KERN_INFO "directory is full\n");
+        return -EMLINK;
+    }
+
+    for (i = 0; i < SIMPLEFS_MAX_SUBFILES; i++) {
+        if (dir_block->files[i].inode == 0) {
+            f_pos = i;
+            break;
+        }
+    }
+
+    dir_block->files[f_pos].inode = inode->i_ino;
+    strncpy(dir_block->files[f_pos].filename, dentry->d_name.name,
+            SIMPLEFS_FILENAME_LEN);
+    mark_buffer_dirty(bh);
+    brelse(bh);
+
+    inode->i_link = (char *) ci->i_data;
+    memcpy(inode->i_link, symname, l);
+    inode->i_size = l - 1;
+    mark_inode_dirty(inode);
+    d_instantiate(dentry, inode);
+
+    return 0;
+}
+
+static const char *simplefs_get_link(struct dentry *dentry,
+                                     struct inode *inode,
+                                     struct delayed_call *done)
+{
+    return inode->i_link;
+}
+
 static const struct inode_operations simplefs_inode_ops = {
     .lookup = simplefs_lookup,
     .create = simplefs_create,
@@ -540,4 +663,10 @@ static const struct inode_operations simplefs_inode_ops = {
     .mkdir = simplefs_mkdir,
     .rmdir = simplefs_rmdir,
     .rename = simplefs_rename,
+    .link = simplefs_link,
+    .symlink = simplefs_symlink,
+};
+
+static const struct inode_operations symlink_inode_ops = {
+    .get_link = simplefs_get_link,
 };
