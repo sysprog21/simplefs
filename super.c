@@ -208,7 +208,7 @@ int simplefs_fill_super(struct super_block *sb, void *data, int silent)
     /* Check magic number */
     if (csb->magic != sb->s_magic) {
         pr_err("Wrong magic number\n");
-        ret = -EPERM;
+        ret = -EINVAL;
         goto release;
     }
 
