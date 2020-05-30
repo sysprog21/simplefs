@@ -18,6 +18,9 @@ $(IMAGE): $(MKFS)
 	dd if=/dev/zero of=${IMAGE} bs=1M count=${IMAGESIZE}
 	./$< $(IMAGE)
 
+check: all
+	script/test.sh $(IMAGE) $(IMAGESIZE) $(MKFS)
+
 clean:
 	make -C $(KDIR) M=$(PWD) clean
 	rm -f *~ $(PWD)/*.ur-safe
