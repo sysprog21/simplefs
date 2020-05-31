@@ -309,7 +309,8 @@ end:
 }
 
 /*
- * Remove a link for a file. If link count is 0, destroy file in this way:
+ * Remove a link for a file including the reference in the parent directory.
+ * If link count is 0, destroy file in this way:
  *   - remove the file from its parent directory.
  *   - cleanup blocks containing data
  *   - cleanup file index block
