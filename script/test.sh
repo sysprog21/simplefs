@@ -52,6 +52,12 @@ test_op 'mkdir dir' # expected to fail
 # create file
 test_op 'touch file'
 
+# create 128 files
+for i in {0..124}
+do
+    test_op "touch $i.txt" # expected to fail with more than 128 files
+done
+
 # hard link
 test_op 'ln file hdlink'
 test_op 'mkdir dir/dir'

@@ -114,6 +114,9 @@ Contains all the inodes of the partition. The maximum number of inodes is equal 
 
 ## TODO
 
+- Bugs
+    * Fail to support longer filename
+    * Directory will be full if more than 128 files
 - support for extents
 - journalling support
 
