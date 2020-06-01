@@ -185,10 +185,12 @@ const struct address_space_operations simplefs_aops = {
     .readpage = simplefs_readpage,
     .writepage = simplefs_writepage,
     .write_begin = simplefs_write_begin,
-    .write_end = simplefs_write_end};
+    .write_end = simplefs_write_end,
+};
 
 const struct file_operations simplefs_file_ops = {
     .llseek = generic_file_llseek,
     .owner = THIS_MODULE,
     .read_iter = generic_file_read_iter,
-    .write_iter = generic_file_write_iter};
+    .write_iter = generic_file_write_iter,
+};
