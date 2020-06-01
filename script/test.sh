@@ -8,7 +8,8 @@ MKFS=$3
 D_MOD="drwxr-xr-x"
 F_MOD="-rw-r--r--"
 S_MOD="lrwxrwxrwx"
-MAXFILESIZE=4194304
+MAXFILESIZE=4194304 # 4MiB
+MAXFILES=128        # max files per dir
 
 test_op() {
     local op=$1 
@@ -53,10 +54,13 @@ test_op 'mkdir dir' # expected to fail
 test_op 'touch file'
 
 # create 128 files
-for i in {0..124}
+for ((i=0; i<=$MAXFILES; i++))
 do
     test_op "touch $i.txt" # expected to fail with more than 128 files
 done
+filecnts=$(ls | wc -w)
+test $filecnts -eq $MAXFILES || echo "Failed, it should be $MAXFILES files"
+sudo rm [0-9]*.txt
 
 # hard link
 test_op 'ln file hdlink'
