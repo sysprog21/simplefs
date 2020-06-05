@@ -291,7 +291,7 @@ static int simplefs_create(struct inode *dir,
     mark_inode_dirty(inode);
     dir->i_mtime = dir->i_atime = dir->i_ctime = current_time(dir);
     if (S_ISDIR(mode))
-        inode_inc_link_count(dir);
+        inc_nlink(dir);
     mark_inode_dirty(dir);
 
     /* setup dentry */
@@ -358,8 +358,10 @@ static int simplefs_unlink(struct inode *dir, struct dentry *dentry)
 
     /* Update inode stats */
     dir->i_mtime = dir->i_atime = dir->i_ctime = current_time(dir);
-    if (S_ISDIR(inode->i_mode))
-        inode_dec_link_count(dir);
+    if (S_ISDIR(inode->i_mode)) {
+        drop_nlink(dir);
+        drop_nlink(inode);
+    }
     mark_inode_dirty(dir);
 
     if (inode->i_nlink > 1) {
@@ -411,6 +413,7 @@ clean_inode:
     i_gid_write(inode, 0);
     inode->i_mode = 0;
     inode->i_ctime.tv_sec = inode->i_mtime.tv_sec = inode->i_atime.tv_sec = 0;
+    drop_nlink(inode);
     mark_inode_dirty(inode);
 
     /* Free inode and index block from bitmap */
@@ -488,7 +491,7 @@ static int simplefs_rename(struct inode *old_dir,
     new_dir->i_atime = new_dir->i_ctime = new_dir->i_mtime =
         current_time(new_dir);
     if (S_ISDIR(src->i_mode))
-        inode_inc_link_count(new_dir);
+        inc_nlink(new_dir);
     mark_inode_dirty(new_dir);
 
     /* remove target from old parent directory */
@@ -517,7 +520,7 @@ static int simplefs_rename(struct inode *old_dir,
     old_dir->i_atime = old_dir->i_ctime = old_dir->i_mtime =
         current_time(old_dir);
     if (S_ISDIR(src->i_mode))
-        inode_dec_link_count(old_dir);
+        drop_nlink(old_dir);
     mark_inode_dirty(old_dir);
 
     return 0;
