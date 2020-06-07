@@ -9,6 +9,7 @@ The super block operations are set at the time of mounting. The operation tables
 
 * Directories: create, remove, list, rename;
 * Regular files: create, remove, read/write (through page cache), rename;
+* Hard/Symbolic links (also symlink or soft link): create, remove, rename;
 * No extended attribute support
 
 ## Prerequisite
