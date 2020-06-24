@@ -22,37 +22,50 @@ static int simplefs_file_get_block(struct inode *inode,
     struct super_block *sb = inode->i_sb;
     struct simplefs_sb_info *sbi = SIMPLEFS_SB(sb);
     struct simplefs_inode_info *ci = SIMPLEFS_INODE(inode);
-    struct simplefs_file_index_block *index;
+    struct simplefs_file_ei_block *index;
     struct buffer_head *bh_index;
     bool alloc = false;
     int ret = 0, bno;
+    uint32_t extent;
 
     /* If block number exceeds filesize, fail */
-    if (iblock >= SIMPLEFS_BLOCK_SIZE >> 2)
+    if (iblock >= SIMPLEFS_MAX_BLOCKS_PER_EXTENT * SIMPLEFS_MAX_EXTENTS)
         return -EFBIG;
 
-    /* Read index block from disk */
-    bh_index = sb_bread(sb, ci->index_block);
+    /* Read directory block from disk */
+    bh_index = sb_bread(sb, ci->dir_block);
     if (!bh_index)
         return -EIO;
-    index = (struct simplefs_file_index_block *) bh_index->b_data;
+    index = (struct simplefs_file_ei_block *) bh_index->b_data;
+
+    extent = simplefs_ext_search(index, iblock);
+    if (extent == -1) {
+        ret = -EFBIG;
+        goto brelse_index;
+    }
 
     /*
      * Check if iblock is already allocated. If not and create is true,
      * allocate it. Else, get the physical block number.
      */
-    if (index->blocks[iblock] == 0) {
+    if (index->extents[extent].ee_start == 0) {
         if (!create)
             return 0;
-        bno = get_free_block(sbi);
+        bno = get_free_blocks(sbi, 8);
         if (!bno) {
             ret = -ENOSPC;
             goto brelse_index;
         }
-        index->blocks[iblock] = bno;
+        index->extents[extent].ee_start = bno;
+        index->extents[extent].ee_len = 8;
+        index->extents[extent].ee_block =
+            extent ? index->extents[extent - 1].ee_block +
+                         index->extents[extent - 1].ee_len
+                   : 0;
         alloc = true;
     } else {
-        bno = index->blocks[iblock];
+        bno = index->extents[extent].ee_start + iblock -
+              index->extents[extent].ee_block;
     }
 
     /* Map the physical block to to the given buffer_head */
@@ -155,24 +168,33 @@ static int simplefs_write_end(struct file *file,
     if (nr_blocks_old > inode->i_blocks) {
         int i;
         struct buffer_head *bh_index;
-        struct simplefs_file_index_block *index;
+        struct simplefs_file_ei_block *index;
+        uint32_t first_ext;
 
         /* Free unused blocks from page cache */
         truncate_pagecache(inode, inode->i_size);
 
-        /* Read index block to remove unused blocks */
-        bh_index = sb_bread(sb, ci->index_block);
+        /* Read ei_block to remove unused blocks */
+        bh_index = sb_bread(sb, ci->ei_block);
         if (!bh_index) {
             pr_err("failed truncating '%s'. we just lost %lu blocks\n",
                    file->f_path.dentry->d_name.name,
                    nr_blocks_old - inode->i_blocks);
             goto end;
         }
-        index = (struct simplefs_file_index_block *) bh_index->b_data;
+        index = (struct simplefs_file_ei_block *) bh_index->b_data;
 
-        for (i = inode->i_blocks - 1; i < nr_blocks_old - 1; i++) {
-            put_block(SIMPLEFS_SB(sb), index->blocks[i]);
-            index->blocks[i] = 0;
+        first_ext = simplefs_ext_search(index, inode->i_blocks - 1);
+        /* Reserve unused block in last extent */
+        if (inode->i_blocks - 1 != index->extents[first_ext].ee_block)
+            first_ext++;
+
+        for (i = first_ext; i < SIMPLEFS_MAX_EXTENTS; i++) {
+            if (!index->extents[i].ee_start)
+                break;
+            put_blocks(SIMPLEFS_SB(sb), index->extents[i].ee_start,
+                       index->extents[i].ee_len);
+            memset(&index->extents[i], 0, sizeof(struct simplefs_extent));
         }
         mark_buffer_dirty(bh_index);
         brelse(bh_index);
@@ -193,4 +215,5 @@ const struct file_operations simplefs_file_ops = {
     .owner = THIS_MODULE,
     .read_iter = generic_file_read_iter,
     .write_iter = generic_file_write_iter,
+    .fsync = generic_file_fsync,
 };

@@ -38,7 +38,7 @@ static int simplefs_iterate(struct file *dir, struct dir_context *ctx)
         return 0;
 
     /* Read the directory index block on disk */
-    bh = sb_bread(sb, ci->index_block);
+    bh = sb_bread(sb, ci->dir_block);
     if (!bh)
         return -EIO;
     dblock = (struct simplefs_dir_block *) bh->b_data;
