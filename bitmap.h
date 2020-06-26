@@ -5,22 +5,27 @@
 #include "simplefs.h"
 
 /*
- * Return the first free bit (set to 1) in a given in-memory bitmap spanning
- * over multiple blocks and clear it.
- * Return 0 if no free bit found (we assume that the first bit is never free
- * because of the superblock and the root inode, thus allowing us to use 0 as an
- * error value).
+ * Return the first bit we found and clear the the following `len` consecutive
+ * free bit(s) (set to 1) in a given in-memory bitmap spanning over multiple
+ * blocks. Return 0 if no enough free bit(s) were found (we assume that the
+ * first bit is never free because of the superblock and the root inode, thus
+ * allowing us to use 0 as an error value).
  */
-static inline uint32_t get_first_free_bit(unsigned long *freemap,
-                                          unsigned long size)
+static inline uint32_t get_first_free_bits(unsigned long *freemap,
+                                           unsigned long size,
+                                           uint32_t len)
 {
-    uint32_t ino = find_first_bit(freemap, size);
-    if (ino == size)
-        return 0;
-
-    bitmap_clear(freemap, ino, 1);
-
-    return ino;
+    uint32_t bit, prev = 0, count = 0;
+    for_each_set_bit (bit, freemap, size) {
+        if (prev != bit - 1)
+            count = 0;
+        prev = bit;
+        if (++count == len) {
+            bitmap_clear(freemap, bit - len + 1, len);
+            return bit - len + 1;
+        }
+    }
+    return 0;
 }
 
 /*
@@ -29,34 +34,37 @@ static inline uint32_t get_first_free_bit(unsigned long *freemap,
  */
 static inline uint32_t get_free_inode(struct simplefs_sb_info *sbi)
 {
-    uint32_t ret = get_first_free_bit(sbi->ifree_bitmap, sbi->nr_inodes);
+    uint32_t ret = get_first_free_bits(sbi->ifree_bitmap, sbi->nr_inodes, 1);
     if (ret)
         sbi->nr_free_inodes--;
     return ret;
 }
 
 /*
- * Return an unused block number and mark it used.
- * Return 0 if no free block was found.
+ * Return `len` unused block(s) number and mark it used.
+ * Return 0 if no enough free block(s) were found.
  */
-static inline uint32_t get_free_block(struct simplefs_sb_info *sbi)
+static inline uint32_t get_free_blocks(struct simplefs_sb_info *sbi,
+                                       uint32_t len)
 {
-    uint32_t ret = get_first_free_bit(sbi->bfree_bitmap, sbi->nr_blocks);
+    uint32_t ret = get_first_free_bits(sbi->bfree_bitmap, sbi->nr_blocks, len);
     if (ret)
-        sbi->nr_free_blocks--;
+        sbi->nr_free_blocks -= len;
     return ret;
 }
 
-/* Mark the i-th bit in freemap as free (i.e. 1) */
-static inline int put_free_bit(unsigned long *freemap,
-                               unsigned long size,
-                               uint32_t i)
+
+/* Mark the `len` bit(s) from i-th bit in freemap as free (i.e. 1) */
+static inline int put_free_bits(unsigned long *freemap,
+                                unsigned long size,
+                                uint32_t i,
+                                uint32_t len)
 {
     /* i is greater than freemap size */
-    if (i > size)
+    if (i + len - 1 > size)
         return -1;
 
-    bitmap_set(freemap, i, 1);
+    bitmap_set(freemap, i, len);
 
     return 0;
 }
@@ -64,19 +72,21 @@ static inline int put_free_bit(unsigned long *freemap,
 /* Mark an inode as unused */
 static inline void put_inode(struct simplefs_sb_info *sbi, uint32_t ino)
 {
-    if (put_free_bit(sbi->ifree_bitmap, sbi->nr_inodes, ino))
+    if (put_free_bits(sbi->ifree_bitmap, sbi->nr_inodes, ino, 1))
         return;
 
     sbi->nr_free_inodes++;
 }
 
-/* Mark a block as unused */
-static inline void put_block(struct simplefs_sb_info *sbi, uint32_t bno)
+/* Mark len block(s) as unused */
+static inline void put_blocks(struct simplefs_sb_info *sbi,
+                              uint32_t bno,
+                              uint32_t len)
 {
-    if (put_free_bit(sbi->bfree_bitmap, sbi->nr_blocks, bno))
+    if (put_free_bits(sbi->bfree_bitmap, sbi->nr_blocks, bno, len))
         return;
 
-    sbi->nr_free_blocks++;
+    sbi->nr_free_blocks += len;
 }
 
 #endif /* SIMPLEFS_BITMAP_H */

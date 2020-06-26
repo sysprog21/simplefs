@@ -8,7 +8,7 @@ MKFS=$3
 D_MOD="drwxr-xr-x"
 F_MOD="-rw-r--r--"
 S_MOD="lrwxrwxrwx"
-MAXFILESIZE=4194304 # 4MiB
+MAXFILESIZE=11173888 # SIMPLEFS_MAX_EXTENTS * SIMPLEFS_MAX_EXTENTS * SIMPLEFS_MAX_BLOCKS_PER_EXTENT
 MAXFILES=128        # max files per dir
 
 test_op() {
@@ -41,7 +41,7 @@ sleep 1
 (modinfo $SIMPLEFS_MOD || exit 1) && \
 echo && \
 sudo insmod $SIMPLEFS_MOD  && \
-dd if=/dev/zero of=$IMAGE bs=1M count=$IMAGESIZE status=none&& \
+dd if=/dev/zero of=$IMAGE bs=1M count=$IMAGESIZE status=none && \
 ./$MKFS $IMAGE && \
 sudo mount -t simplefs -o loop $IMAGE test && \
 pushd test >/dev/null
@@ -82,7 +82,7 @@ test_op 'echo abc > file'
 test $(cat file) = "abc" || echo "Failed to write"
 
 # file too large
-test_op 'dd if=/dev/zero of=file bs=1M count=5 status=none'
+test_op 'dd if=/dev/zero of=file bs=1M count=12 status=none'
 filesize=$(sudo ls -lR  | grep -e "$F_MOD 2".*file | awk '{print $5}')
 test $filesize -le $MAXFILESIZE || echo "Failed, file size over the limit"
 

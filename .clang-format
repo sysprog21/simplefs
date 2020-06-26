@@ -13,3 +13,6 @@ UseTab: Never
 IndentWidth: 4
 BreakBeforeBraces: Linux
 AccessModifierOffset: -4
+ForEachMacros:
+  - 'for_each_set_bit'
+  - 'for_each_set_bit_from'

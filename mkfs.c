@@ -96,7 +96,7 @@ static int write_inode_store(int fd, struct superblock *sb)
     inode->i_ctime = inode->i_atime = inode->i_mtime = htole32(0);
     inode->i_blocks = htole32(1);
     inode->i_nlink = htole32(2);
-    inode->index_block = htole32(first_data_block);
+    inode->dir_block = htole32(first_data_block);
 
     int ret = write(fd, block, SIMPLEFS_BLOCK_SIZE);
     if (ret != SIMPLEFS_BLOCK_SIZE) {
