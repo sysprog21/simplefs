@@ -85,7 +85,7 @@ Contains all the inodes of the partition. The maximum number of inodes is equal 
   inode
   +-----------------------+
   | i_mode = IFDIR | 0755 |            block 123
-  | dir_block = 123 ----|-------->  +-----------+
+  | dir_block = 123   ----|-------->  +-----------+
   | i_size = 4 KiB        |         0 | 24 (foo)  |
   | i_blocks = 1          |           |-----------|
   +-----------------------+         1 | 45 (bar)  |
