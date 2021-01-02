@@ -3,7 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <sys/stat.h>
+#include <linux/fs.h>
 #include <unistd.h>
 
 #include "simplefs.h"
@@ -244,6 +246,18 @@ int main(int argc, char **argv)
         perror("fstat():");
         ret = EXIT_FAILURE;
         goto fclose;
+    }
+
+    /* Get block device size */
+    if ((stat_buf.st_mode & S_IFMT) == S_IFBLK) {
+        long int blk_size = 0;
+        ret = ioctl(fd, BLKGETSIZE64, &blk_size);
+        if (ret != 0) {
+            perror("BLKGETSIZE64:");
+            ret = EXIT_FAILURE;
+            goto fclose;
+        }
+        stat_buf.st_size = blk_size;
     }
 
     /* Check if image is large enough */
