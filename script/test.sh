@@ -36,7 +36,7 @@ fi
 mkdir -p test  
 sudo umount test 2>/dev/null
 sleep 1
-sudo rmmod $SIMPLEFS_MOD 2>/dev/null
+sudo rmmod simplefs 2>/dev/null
 sleep 1
 (modinfo $SIMPLEFS_MOD || exit 1) && \
 echo && \
@@ -96,3 +96,4 @@ check_exist $S_MOD 1 symlink
 sleep 1
 popd >/dev/null
 sudo umount test
+sudo rmmod simplefs
