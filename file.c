@@ -177,7 +177,7 @@ static int simplefs_write_end(struct file *file,
         /* Read ei_block to remove unused blocks */
         bh_index = sb_bread(sb, ci->ei_block);
         if (!bh_index) {
-            pr_err("failed truncating '%s'. we just lost %lu blocks\n",
+            pr_err("failed truncating '%s'. we just lost %llu blocks\n",
                    file->f_path.dentry->d_name.name,
                    nr_blocks_old - inode->i_blocks);
             goto end;
