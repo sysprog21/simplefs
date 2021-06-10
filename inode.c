@@ -339,7 +339,7 @@ static int simplefs_unlink(struct inode *dir, struct dentry *dentry)
     struct simplefs_sb_info *sbi = SIMPLEFS_SB(sb);
     struct inode *inode = d_inode(dentry);
     struct buffer_head *bh = NULL, *bh2 = NULL;
-    struct simplefs_dir_block *dir_block = NULL;
+    struct simplefs_dir_block *dblock = NULL;
     struct simplefs_file_ei_block *file_block = NULL;
     int i, j, f_id = -1, nr_subs = 0;
 
@@ -350,23 +350,23 @@ static int simplefs_unlink(struct inode *dir, struct dentry *dentry)
     bh = sb_bread(sb, SIMPLEFS_INODE(dir)->dir_block);
     if (!bh)
         return -EIO;
-    dir_block = (struct simplefs_dir_block *) bh->b_data;
+    dblock = (struct simplefs_dir_block *) bh->b_data;
 
     /* Search for inode in parent index and get number of subfiles */
     for (i = 0; i < SIMPLEFS_MAX_SUBFILES; i++) {
-        if (strncmp(dir_block->files[i].filename, dentry->d_name.name,
+        if (strncmp(dblock->files[i].filename, dentry->d_name.name,
                     SIMPLEFS_FILENAME_LEN) == 0)
             f_id = i;
-        else if (dir_block->files[i].inode == 0)
+        else if (dblock->files[i].inode == 0)
             break;
     }
     nr_subs = i;
 
     /* Remove file from parent directory */
     if (f_id != SIMPLEFS_MAX_SUBFILES - 1)
-        memmove(dir_block->files + f_id, dir_block->files + f_id + 1,
+        memmove(dblock->files + f_id, dblock->files + f_id + 1,
                 (nr_subs - f_id - 1) * sizeof(struct simplefs_file));
-    memset(&dir_block->files[nr_subs - 1], 0, sizeof(struct simplefs_file));
+    memset(&dblock->files[nr_subs - 1], 0, sizeof(struct simplefs_file));
     mark_buffer_dirty(bh);
     brelse(bh);
 
@@ -465,7 +465,7 @@ static int simplefs_rename(struct inode *old_dir,
     struct simplefs_inode_info *ci_new = SIMPLEFS_INODE(new_dir);
     struct inode *src = d_inode(old_dentry);
     struct buffer_head *bh_old = NULL, *bh_new = NULL;
-    struct simplefs_dir_block *dir_block = NULL;
+    struct simplefs_dir_block *dblock = NULL;
     int i, f_id = -1, new_pos = -1, ret, nr_subs, f_pos = -1;
 
     /* fail with these unsupported flags */
@@ -480,25 +480,25 @@ static int simplefs_rename(struct inode *old_dir,
     bh_new = sb_bread(sb, ci_new->dir_block);
     if (!bh_new)
         return -EIO;
-    dir_block = (struct simplefs_dir_block *) bh_new->b_data;
+    dblock = (struct simplefs_dir_block *) bh_new->b_data;
     for (i = 0; i < SIMPLEFS_MAX_SUBFILES; i++) {
         /* if old_dir == new_dir, save the renamed file position */
         if (new_dir == old_dir) {
-            if (strncmp(dir_block->files[i].filename, old_dentry->d_name.name,
+            if (strncmp(dblock->files[i].filename, old_dentry->d_name.name,
                         SIMPLEFS_FILENAME_LEN) == 0)
                 f_pos = i;
         }
-        if (strncmp(dir_block->files[i].filename, new_dentry->d_name.name,
+        if (strncmp(dblock->files[i].filename, new_dentry->d_name.name,
                     SIMPLEFS_FILENAME_LEN) == 0) {
             ret = -EEXIST;
             goto relse_new;
         }
-        if (new_pos < 0 && dir_block->files[i].inode == 0)
+        if (new_pos < 0 && dblock->files[i].inode == 0)
             new_pos = i;
     }
     /* if old_dir == new_dir, just rename entry */
     if (old_dir == new_dir) {
-        strncpy(dir_block->files[f_pos].filename, new_dentry->d_name.name,
+        strncpy(dblock->files[f_pos].filename, new_dentry->d_name.name,
                 SIMPLEFS_FILENAME_LEN);
         mark_buffer_dirty(bh_new);
         ret = 0;
@@ -512,8 +512,8 @@ static int simplefs_rename(struct inode *old_dir,
     }
 
     /* insert in new parent directory */
-    dir_block->files[new_pos].inode = src->i_ino;
-    strncpy(dir_block->files[new_pos].filename, new_dentry->d_name.name,
+    dblock->files[new_pos].inode = src->i_ino;
+    strncpy(dblock->files[new_pos].filename, new_dentry->d_name.name,
             SIMPLEFS_FILENAME_LEN);
     mark_buffer_dirty(bh_new);
     brelse(bh_new);
@@ -529,21 +529,21 @@ static int simplefs_rename(struct inode *old_dir,
     bh_old = sb_bread(sb, ci_old->dir_block);
     if (!bh_old)
         return -EIO;
-    dir_block = (struct simplefs_dir_block *) bh_old->b_data;
+    dblock = (struct simplefs_dir_block *) bh_old->b_data;
     /* Search for inode in old directory and number of subfiles */
     for (i = 0; SIMPLEFS_MAX_SUBFILES; i++) {
-        if (dir_block->files[i].inode == src->i_ino)
+        if (dblock->files[i].inode == src->i_ino)
             f_id = i;
-        else if (dir_block->files[i].inode == 0)
+        else if (dblock->files[i].inode == 0)
             break;
     }
     nr_subs = i;
 
     /* Remove file from old parent directory */
     if (f_id != SIMPLEFS_MAX_SUBFILES - 1)
-        memmove(dir_block->files + f_id, dir_block->files + f_id + 1,
+        memmove(dblock->files + f_id, dblock->files + f_id + 1,
                 (nr_subs - f_id - 1) * sizeof(struct simplefs_file));
-    memset(&dir_block->files[nr_subs - 1], 0, sizeof(struct simplefs_file));
+    memset(&dblock->files[nr_subs - 1], 0, sizeof(struct simplefs_file));
     mark_buffer_dirty(bh_old);
     brelse(bh_old);
 
@@ -609,30 +609,30 @@ static int simplefs_link(struct dentry *old_dentry,
     struct inode *inode = d_inode(old_dentry);
     struct super_block *sb = inode->i_sb;
     struct simplefs_inode_info *ci_dir = SIMPLEFS_INODE(dir);
-    struct simplefs_dir_block *dir_block;
+    struct simplefs_dir_block *dblock;
     struct buffer_head *bh;
     int f_pos = -1, ret = 0, i = 0;
 
     bh = sb_bread(sb, ci_dir->dir_block);
     if (!bh)
         return -EIO;
-    dir_block = (struct simplefs_dir_block *) bh->b_data;
+    dblock = (struct simplefs_dir_block *) bh->b_data;
 
-    if (dir_block->files[SIMPLEFS_MAX_SUBFILES - 1].inode != 0) {
+    if (dblock->files[SIMPLEFS_MAX_SUBFILES - 1].inode != 0) {
         ret = -EMLINK;
         printk(KERN_INFO "directory is full");
         goto end;
     }
 
     for (i = 0; i < SIMPLEFS_MAX_SUBFILES; i++) {
-        if (dir_block->files[i].inode == 0) {
+        if (dblock->files[i].inode == 0) {
             f_pos = i;
             break;
         }
     }
 
-    dir_block->files[f_pos].inode = inode->i_ino;
-    strncpy(dir_block->files[f_pos].filename, dentry->d_name.name,
+    dblock->files[f_pos].inode = inode->i_ino;
+    strncpy(dblock->files[f_pos].filename, dentry->d_name.name,
             SIMPLEFS_FILENAME_LEN);
     mark_buffer_dirty(bh);
 
@@ -659,7 +659,7 @@ static int simplefs_symlink(struct inode *dir,
     struct inode *inode = simplefs_new_inode(dir, S_IFLNK | S_IRWXUGO);
     struct simplefs_inode_info *ci = SIMPLEFS_INODE(inode);
     struct simplefs_inode_info *ci_dir = SIMPLEFS_INODE(dir);
-    struct simplefs_dir_block *dir_block;
+    struct simplefs_dir_block *dblock;
     struct buffer_head *bh;
     int f_pos = 0, i = 0;
 
@@ -672,22 +672,22 @@ static int simplefs_symlink(struct inode *dir,
 
     if (!bh)
         return -EIO;
-    dir_block = (struct simplefs_dir_block *) bh->b_data;
+    dblock = (struct simplefs_dir_block *) bh->b_data;
 
-    if (dir_block->files[SIMPLEFS_MAX_SUBFILES - 1].inode != 0) {
+    if (dblock->files[SIMPLEFS_MAX_SUBFILES - 1].inode != 0) {
         printk(KERN_INFO "directory is full\n");
         return -EMLINK;
     }
 
     for (i = 0; i < SIMPLEFS_MAX_SUBFILES; i++) {
-        if (dir_block->files[i].inode == 0) {
+        if (dblock->files[i].inode == 0) {
             f_pos = i;
             break;
         }
     }
 
-    dir_block->files[f_pos].inode = inode->i_ino;
-    strncpy(dir_block->files[f_pos].filename, dentry->d_name.name,
+    dblock->files[f_pos].inode = inode->i_ino;
+    strncpy(dblock->files[f_pos].filename, dentry->d_name.name,
             SIMPLEFS_FILENAME_LEN);
     mark_buffer_dirty(bh);
     brelse(bh);
