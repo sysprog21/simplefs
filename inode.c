@@ -480,7 +480,7 @@ static int simplefs_rename(struct inode *old_dir,
         goto relse_new;
     }
 
-    /* If new directory is empty, fail */
+    /* If new directory is full, fail */
     if (new_pos < 0) {
         ret = -EMLINK;
         goto relse_new;

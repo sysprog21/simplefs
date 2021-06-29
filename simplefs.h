@@ -82,14 +82,12 @@ struct simplefs_inode_info {
     struct inode vfs_inode;
 };
 
-struct simplefs_extent {
-    uint32_t ee_block; /* first logical block extent covers */
-    uint32_t ee_len;   /* number of blocks covered by extent */
-    uint32_t ee_start; /* first physical block extent covers */
-};
-
 struct simplefs_file_ei_block {
-    struct simplefs_extent extents[SIMPLEFS_MAX_EXTENTS];
+    struct simplefs_extent {
+        uint32_t ee_block; /* first logical block extent covers */
+        uint32_t ee_len;   /* number of blocks covered by extent */
+        uint32_t ee_start; /* first physical block extent covers */
+    } extents[SIMPLEFS_MAX_EXTENTS];
 };
 
 struct simplefs_dir_block {
