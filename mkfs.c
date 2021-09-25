@@ -38,8 +38,7 @@ static struct superblock *write_superblock(int fd, struct stat *fstats)
     uint32_t nr_istore_blocks = idiv_ceil(nr_inodes, SIMPLEFS_INODES_PER_BLOCK);
     uint32_t nr_ifree_blocks = idiv_ceil(nr_inodes, SIMPLEFS_BLOCK_SIZE * 8);
     uint32_t nr_bfree_blocks = idiv_ceil(nr_blocks, SIMPLEFS_BLOCK_SIZE * 8);
-    uint32_t nr_data_blocks =
-        nr_blocks - 1 - nr_istore_blocks - nr_ifree_blocks - nr_bfree_blocks;
+    uint32_t nr_data_blocks = nr_blocks - nr_istore_blocks - nr_ifree_blocks - nr_bfree_blocks;
 
     memset(sb, 0, sizeof(struct superblock));
     sb->info = (struct simplefs_sb_info){
