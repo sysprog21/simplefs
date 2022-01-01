@@ -8,13 +8,21 @@
 
 #define SIMPLEFS_BLOCK_SIZE (1 << 12) /* 4 KiB */
 #define SIMPLEFS_MAX_EXTENTS \
-    SIMPLEFS_BLOCK_SIZE / sizeof(struct simplefs_extent)
+    ((SIMPLEFS_BLOCK_SIZE - sizeof(uint32_t)) / sizeof(struct simplefs_extent))
 #define SIMPLEFS_MAX_BLOCKS_PER_EXTENT 8 /* It can be ~(uint32) 0 */
 #define SIMPLEFS_MAX_FILESIZE                                      \
-    (uint64_t) SIMPLEFS_MAX_BLOCKS_PER_EXTENT *SIMPLEFS_BLOCK_SIZE \
-        *SIMPLEFS_MAX_EXTENTS
-#define SIMPLEFS_FILENAME_LEN 28
-#define SIMPLEFS_MAX_SUBFILES 128
+    ((uint64_t) SIMPLEFS_MAX_BLOCKS_PER_EXTENT *SIMPLEFS_BLOCK_SIZE \
+        *SIMPLEFS_MAX_EXTENTS)
+
+#define SIMPLEFS_FILENAME_LEN 255
+
+#define SIMPLEFS_FILES_PER_BLOCK \
+    (SIMPLEFS_BLOCK_SIZE / sizeof(struct simplefs_file))
+#define SIMPLEFS_FILES_PER_EXT \
+    (SIMPLEFS_FILES_PER_BLOCK *SIMPLEFS_MAX_BLOCKS_PER_EXTENT)
+
+#define SIMPLEFS_MAX_SUBFILES \
+    (SIMPLEFS_FILES_PER_EXT *SIMPLEFS_MAX_EXTENTS)
 
 #include <linux/version.h>
 
@@ -93,14 +101,17 @@ struct simplefs_extent {
 };
 
 struct simplefs_file_ei_block {
+    uint32_t nr_files; /* Number of files in directory */
     struct simplefs_extent extents[SIMPLEFS_MAX_EXTENTS];
 };
 
+struct simplefs_file {
+    uint32_t inode;
+    char filename[SIMPLEFS_FILENAME_LEN];
+};
+
 struct simplefs_dir_block {
-    struct simplefs_file {
-        uint32_t inode;
-        char filename[SIMPLEFS_FILENAME_LEN];
-    } files[SIMPLEFS_MAX_SUBFILES];
+    struct simplefs_file files[SIMPLEFS_FILES_PER_BLOCK];
 };
 
 /* superblock functions */

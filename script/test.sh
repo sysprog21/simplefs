@@ -8,8 +8,8 @@ MKFS=$3
 D_MOD="drwxr-xr-x"
 F_MOD="-rw-r--r--"
 S_MOD="lrwxrwxrwx"
-MAXFILESIZE=11173888 # SIMPLEFS_MAX_EXTENTS * SIMPLEFS_MAX_EXTENTS * SIMPLEFS_MAX_BLOCKS_PER_EXTENT
-MAXFILES=128        # max files per dir
+MAXFILESIZE=11173888 # SIMPLEFS_MAX_EXTENTS * SIMPLEFS_MAX_BLOCKS_PER_EXTENT * SIMPLEFS_BLOCK_SIZE
+MAXFILES=40920        # max files per dir
 
 test_op() {
     local op=$1 
@@ -53,14 +53,14 @@ test_op 'mkdir dir' # expected to fail
 # create file
 test_op 'touch file'
 
-# create 128 files
+# create 40920 files
 for ((i=0; i<=$MAXFILES; i++))
 do
-    test_op "touch $i.txt" # expected to fail with more than 128 files
+    test_op "touch $i.txt" # expected to fail with more than 40920 files
 done
 filecnts=$(ls | wc -w)
 test $filecnts -eq $MAXFILES || echo "Failed, it should be $MAXFILES files"
-sudo rm [0-9]*.txt
+find . -name '[0-9]*.txt' | xargs -n 2000 sudo rm
 
 # hard link
 test_op 'ln file hdlink'
@@ -72,7 +72,7 @@ test_op 'ln -s file symlink'
 # list directory contents
 test_op 'ls -lR'
 
-# name too long (expected to fail when lookup)
+# now it supports longer filename
 test_op 'mkdir len_of_name_of_this_dir_is_29'
 test_op 'touch len_of_name_of_the_file_is_29'
 test_op 'ln -s dir len_of_name_of_the_link_is_29'
