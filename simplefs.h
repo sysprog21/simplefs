@@ -54,10 +54,7 @@ struct simplefs_inode {
     uint32_t i_mtime;  /* Modification time */
     uint32_t i_blocks; /* Block count */
     uint32_t i_nlink;  /* Hard links count */
-    union {
-        uint32_t ei_block;  /* Block with list of extents for this file */
-        uint32_t dir_block; /* Block with list of files for this directory */
-    };
+    uint32_t ei_block;  /* Block with list of extents for this file */
     char i_data[32]; /* store symlink content */
 };
 
@@ -86,10 +83,7 @@ struct simplefs_sb_info {
 #ifdef __KERNEL__
 
 struct simplefs_inode_info {
-    union {
-        uint32_t ei_block;  /* Block with list of extents for this file */
-        uint32_t dir_block; /* Block with list of files for this directory */
-    };
+    uint32_t ei_block;  /* Block with list of extents for this file */
     char i_data[32];
     struct inode vfs_inode;
 };

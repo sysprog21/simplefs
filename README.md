@@ -79,7 +79,7 @@ Each block is 4 KiB large.
 The superblock is the first block of the partition (block 0). It contains the partition's metadata, such as the number of blocks, number of inodes, number of free inodes/blocks, ...
 
 ### Inode store
-Contains all the inodes of the partition. The maximum number of inodes is equal to the number of blocks of the partition. Each inode contains 72 B of data: standard data such as file size and number of used blocks, as well as a simplefs-specific union field contain `dir_block` and `ei_block`. This block contains:
+Contains all the inodes of the partition. The maximum number of inodes is equal to the number of blocks of the partition. Each inode contains 72 B of data: standard data such as file size and number of used blocks, as well as a simplefs-specific field `ei_block`. This block contains:
   - for a directory: the list of files in this directory. A directory can contain at most 40920 files, and filenames are limited to 255 characters to fit in a single block.
   ```
   inode
