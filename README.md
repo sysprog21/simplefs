@@ -30,7 +30,7 @@ Let's test kernel module:
 $ sudo insmod simplefs.ko
 ```
 
-Correspoinding kernel message:
+Corresponding kernel message:
 ```
 simplefs: module loaded
 ```
