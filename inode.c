@@ -174,7 +174,7 @@ static struct inode *simplefs_new_inode(struct inode *dir, mode_t mode)
     }
 
     if (S_ISLNK(mode)) {
-#if user_namespace_required()
+#if USER_NS_REQUIRED()
         inode_init_owner(&init_user_ns, inode, dir, mode);
 #else
         inode_init_owner(inode, dir, mode);
@@ -195,7 +195,7 @@ static struct inode *simplefs_new_inode(struct inode *dir, mode_t mode)
     }
 
     /* Initialize inode */
-#if user_namespace_required()
+#if USER_NS_REQUIRED()
     inode_init_owner(&init_user_ns, inode, dir, mode);
 #else
     inode_init_owner(inode, dir, mode);
@@ -233,7 +233,7 @@ put_ino:
  *   - cleanup index block of the new inode
  *   - add new file/directory in parent index
  */
-#if user_namespace_required()
+#if USER_NS_REQUIRED()
 static int simplefs_create(struct user_namespace *ns,
                            struct inode *dir,
                            struct dentry *dentry,
@@ -445,7 +445,7 @@ clean_inode:
     return 0;
 }
 
-#if user_namespace_required()
+#if USER_NS_REQUIRED()
 static int simplefs_rename(struct user_namespace *ns,
                            struct inode *old_dir,
                            struct dentry *old_dentry,
@@ -561,7 +561,7 @@ relse_new:
     return ret;
 }
 
-#if user_namespace_required()
+#if USER_NS_REQUIRED()
 static int simplefs_mkdir(struct user_namespace *ns,
                           struct inode *dir,
                           struct dentry *dentry,
@@ -643,7 +643,7 @@ end:
     return ret;
 }
 
-#if user_namespace_required()
+#if USER_NS_REQUIRED()
 static int simplefs_symlink(struct user_namespace *ns,
                             struct inode *dir,
                             struct dentry *dentry,
