@@ -282,7 +282,12 @@ int simplefs_fill_super(struct super_block *sb, void *data, int silent)
         ret = PTR_ERR(root_inode);
         goto free_bfree;
     }
+#if user_namespace_required()
     inode_init_owner(&init_user_ns, root_inode, NULL, root_inode->i_mode);
+#else
+    inode_init_owner(root_inode, NULL, root_inode->i_mode);
+#endif
+    
     sb->s_root = d_make_root(root_inode);
     if (!sb->s_root) {
         ret = -ENOMEM;

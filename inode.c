@@ -174,7 +174,11 @@ static struct inode *simplefs_new_inode(struct inode *dir, mode_t mode)
     }
 
     if (S_ISLNK(mode)) {
+#if user_namespace_required()
         inode_init_owner(&init_user_ns, inode, dir, mode);
+#else
+        inode_init_owner(inode, dir, mode);
+#endif
         set_nlink(inode, 1);
         inode->i_ctime = inode->i_atime = inode->i_mtime = current_time(inode);
         inode->i_op = &symlink_inode_ops;
@@ -191,7 +195,11 @@ static struct inode *simplefs_new_inode(struct inode *dir, mode_t mode)
     }
 
     /* Initialize inode */
+#if user_namespace_required()
     inode_init_owner(&init_user_ns, inode, dir, mode);
+#else
+    inode_init_owner(inode, dir, mode);
+#endif
     inode->i_blocks = 1;
     if (S_ISDIR(mode)) {
         ci->dir_block = bno;
@@ -225,11 +233,18 @@ put_ino:
  *   - cleanup index block of the new inode
  *   - add new file/directory in parent index
  */
+#if user_namespace_required()
 static int simplefs_create(struct user_namespace *ns,
                            struct inode *dir,
                            struct dentry *dentry,
                            umode_t mode,
                            bool excl)
+#else
+static int simplefs_create(struct inode *dir,
+                           struct dentry *dentry,
+                           umode_t mode,
+                           bool excl)
+#endif
 {
     struct super_block *sb;
     struct inode *inode;
@@ -430,12 +445,20 @@ clean_inode:
     return 0;
 }
 
+#if user_namespace_required()
 static int simplefs_rename(struct user_namespace *ns,
                            struct inode *old_dir,
                            struct dentry *old_dentry,
                            struct inode *new_dir,
                            struct dentry *new_dentry,
                            unsigned int flags)
+#else
+static int simplefs_rename(struct inode *old_dir,
+                           struct dentry *old_dentry,
+                           struct inode *new_dir,
+                           struct dentry *new_dentry,
+                           unsigned int flags)
+#endif
 {
     struct super_block *sb = old_dir->i_sb;
     struct simplefs_inode_info *ci_old = SIMPLEFS_INODE(old_dir);
@@ -538,6 +561,7 @@ relse_new:
     return ret;
 }
 
+#if user_namespace_required()
 static int simplefs_mkdir(struct user_namespace *ns,
                           struct inode *dir,
                           struct dentry *dentry,
@@ -545,6 +569,14 @@ static int simplefs_mkdir(struct user_namespace *ns,
 {
     return simplefs_create(ns, dir, dentry, mode | S_IFDIR, 0);
 }
+#else
+static int simplefs_mkdir(struct inode *dir,
+                          struct dentry *dentry,
+                          umode_t mode)
+{
+    return simplefs_create(dir, dentry, mode | S_IFDIR, 0);
+}
+#endif
 
 static int simplefs_rmdir(struct inode *dir, struct dentry *dentry)
 {
@@ -611,10 +643,16 @@ end:
     return ret;
 }
 
+#if user_namespace_required()
 static int simplefs_symlink(struct user_namespace *ns,
                             struct inode *dir,
                             struct dentry *dentry,
                             const char *symname)
+#else
+static int simplefs_symlink(struct inode *dir,
+                            struct dentry *dentry,
+                            const char *symname)
+#endif
 {
     struct super_block *sb = dir->i_sb;
     unsigned int l = strlen(symname) + 1;

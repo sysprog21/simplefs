@@ -16,6 +16,10 @@
 #define SIMPLEFS_FILENAME_LEN 28
 #define SIMPLEFS_MAX_SUBFILES 128
 
+#include <linux/version.h>
+
+#define user_namespace_required() LINUX_VERSION_CODE >= KERNEL_VERSION(5,12,0)
+
 /*
  * simplefs partition layout
  * +---------------+
