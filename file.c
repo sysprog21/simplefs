@@ -33,7 +33,7 @@ static int simplefs_file_get_block(struct inode *inode,
         return -EFBIG;
 
     /* Read directory block from disk */
-    bh_index = sb_bread(sb, ci->dir_block);
+    bh_index = sb_bread(sb, ci->ei_block);
     if (!bh_index)
         return -EIO;
     index = (struct simplefs_file_ei_block *) bh_index->b_data;

@@ -79,21 +79,28 @@ Each block is 4 KiB large.
 The superblock is the first block of the partition (block 0). It contains the partition's metadata, such as the number of blocks, number of inodes, number of free inodes/blocks, ...
 
 ### Inode store
-Contains all the inodes of the partition. The maximum number of inodes is equal to the number of blocks of the partition. Each inode contains 72 B of data: standard data such as file size and number of used blocks, as well as a simplefs-specific union field contain `dir_block` and `ei_block`. This block contains:
-  - for a directory: the list of files in this directory. A directory can contain at most 128 files, and filenames are limited to 28 characters to fit in a single block.
+Contains all the inodes of the partition. The maximum number of inodes is equal to the number of blocks of the partition. Each inode contains 72 B of data: standard data such as file size and number of used blocks, as well as a simplefs-specific field `ei_block`. This block contains:
+  - for a directory: the list of files in this directory. A directory can contain at most 40920 files, and filenames are limited to 255 characters to fit in a single block.
   ```
   inode
   +-----------------------+
   | i_mode = IFDIR | 0755 |            block 123
-  | dir_block = 123   ----|-------->  +-----------+
-  | i_size = 4 KiB        |         0 | 24 (foo)  |
-  | i_blocks = 1          |           |-----------|
-  +-----------------------+         1 | 45 (bar)  |
-                                      |-----------|
-                                      | ...       |
-                                      |-----------|
-                                  127 | 0         |
-                                      +-----------+
+  | ei_block = 123    ----|-------->  +----------------+
+  | i_size = 4 KiB        |         0 | ee_block  = 0  |
+  | i_blocks = 1          |           | ee_len    = 8  |      block 84
+  +-----------------------+           | ee_start  = 84 |--->  +-----------+
+                                      |----------------|    0 | 24 (foo)  |
+                                    1 | ee_block  = 8  |      |-----------|
+                                      | ee_len    = 8  |    1 | 45 (bar)  |
+                                      | ee_start  = 16 |      |-----------|
+                                      |----------------|      | ...       |
+                                      | ...            |      |-----------|
+                                      |----------------|   14 | 0         |
+                                  341 | ee_block  = 0  |      +-----------+
+                                      | ee_len    = 0  |
+                                      | ee_start  = 0  |
+                                      +----------------+
+
   ```
   - for a file: the list of extents containing the actual data of this file. Since block IDs are stored as `sizeof(struct simplefs_extent)` bytes values, at most 341 links fit in a single block, limiting the size of a file to around 10.65 MiB (10912 KiB).
   ```
@@ -144,9 +151,9 @@ struct simplefs_extent
 ## TODO
 
 - Bugs
-    * Fail to support longer filename
-    * Directory will be full if more than 128 files
-    * Fail to show `.` and `..` with `ls -a` command
+    - [*] Fail to support longer filename
+    - [*] Directory will be full if more than 128 files
+    - [ ] Fail to show `.` and `..` with `ls -a` command
 - journalling support
 
 ## License
