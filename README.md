@@ -127,6 +127,7 @@ Contains all the inodes of the partition. The maximum number of inodes is equal 
                                     | ee_start  = 0  |
                                     +----------------+
   ```
+
 ### Extent support
 The extent covers consecutive blocks, we allocate consecutive disk blocks for it at a single time. It is described by `struct simplefs_extent` which contains three members:
 - `ee_block`: first logical block extent covers.
@@ -148,12 +149,11 @@ struct simplefs_extent
                                  +---------+
 
 ```
+
 ## TODO
 
 - Bugs
-    - [*] Fail to support longer filename
-    - [*] Directory will be full if more than 128 files
-    - [ ] Fail to show `.` and `..` with `ls -a` command
+    - Fail to show `.` and `..` with `ls -a` command
 - journalling support
 
 ## License
