@@ -81,10 +81,17 @@ brelse_index:
  * Called by the page cache to read a page from the physical disk and map it in
  * memory.
  */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
+static void simplefs_readahead(struct readahead_control *rac)
+{
+    mpage_readahead(rac, simplefs_file_get_block);
+}
+#else
 static int simplefs_readpage(struct file *file, struct page *page)
 {
     return mpage_readpage(page, simplefs_file_get_block);
 }
+#endif
 
 /*
  * Called by the page cache to write a dirty page to the physical disk (when
@@ -100,6 +107,14 @@ static int simplefs_writepage(struct page *page, struct writeback_control *wbc)
  * data in the page cache. This functions checks if the write will be able to
  * complete and allocates the necessary blocks through block_write_begin().
  */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
+static int simplefs_write_begin(struct file *file,
+                                struct address_space *mapping,
+                                loff_t pos,
+                                unsigned int len,
+                                struct page **pagep,
+                                void **fsdata)
+#else
 static int simplefs_write_begin(struct file *file,
                                 struct address_space *mapping,
                                 loff_t pos,
@@ -107,6 +122,7 @@ static int simplefs_write_begin(struct file *file,
                                 unsigned int flags,
                                 struct page **pagep,
                                 void **fsdata)
+#endif
 {
     struct simplefs_sb_info *sbi = SIMPLEFS_SB(file->f_inode->i_sb);
     int err;
@@ -124,8 +140,12 @@ static int simplefs_write_begin(struct file *file,
         return -ENOSPC;
 
     /* prepare the write */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
+    err = block_write_begin(mapping, pos, len, pagep, simplefs_file_get_block);
+#else
     err = block_write_begin(mapping, pos, len, flags, pagep,
                             simplefs_file_get_block);
+#endif
     /* if this failed, reclaim newly allocated blocks */
     if (err < 0)
         pr_err("newly allocated blocks reclaim not implemented yet\n");
@@ -204,7 +224,11 @@ end:
 }
 
 const struct address_space_operations simplefs_aops = {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
+    .readahead = simplefs_readahead,
+#else
     .readpage = simplefs_readpage,
+#endif
     .writepage = simplefs_writepage,
     .write_begin = simplefs_write_begin,
     .write_end = simplefs_write_end,
