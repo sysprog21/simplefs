@@ -27,6 +27,7 @@
 #include <linux/version.h>
 
 #define USER_NS_REQUIRED() LINUX_VERSION_CODE >= KERNEL_VERSION(5,12,0)
+#define USER_NS_REQUIRED_6_3() LINUX_VERSION_CODE >= KERNEL_VERSION(6,3,0)
 
 /*
  * simplefs partition layout

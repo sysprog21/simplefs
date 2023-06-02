@@ -282,7 +282,10 @@ int simplefs_fill_super(struct super_block *sb, void *data, int silent)
         ret = PTR_ERR(root_inode);
         goto free_bfree;
     }
-#if USER_NS_REQUIRED()
+
+#if USER_NS_REQUIRED_6_3()
+    inode_init_owner(&nop_mnt_idmap, root_inode, NULL, root_inode->i_mode);
+#elif USER_NS_REQUIRED()
     inode_init_owner(&init_user_ns, root_inode, NULL, root_inode->i_mode);
 #else
     inode_init_owner(root_inode, NULL, root_inode->i_mode);
