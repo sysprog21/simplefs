@@ -6,7 +6,7 @@ KDIR ?= /lib/modules/$(shell uname -r)/build
 MKFS = mkfs.simplefs
 
 all: $(MKFS)
-	make -C $(KDIR) M=$(PWD) modules
+	+make -C $(KDIR) M=$(PWD) modules
 
 IMAGE ?= test.img
 IMAGESIZE ?= 200

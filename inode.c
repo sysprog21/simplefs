@@ -196,7 +196,7 @@ static struct inode *simplefs_new_inode(struct inode *dir, mode_t mode)
 
     if (S_ISLNK(mode)) {
 #if MNT_IDMAP_REQUIRED()
-        inode_init_owner(&nop_mnt_idmap, inode, dir, inode->mode);
+        inode_init_owner(&nop_mnt_idmap, inode, dir, inode->i_mode);
 #elif USER_NS_REQUIRED()
         inode_init_owner(&init_user_ns, inode, dir, mode);
 #else
@@ -219,7 +219,7 @@ static struct inode *simplefs_new_inode(struct inode *dir, mode_t mode)
 
     /* Initialize inode */
 #if MNT_IDMAP_REQUIRED()
-    inode_init_owner(&nop_mnt_idmap, inode, dir, inode->mode);
+    inode_init_owner(&nop_mnt_idmap, inode, dir, inode->i_mode);
 #elif USER_NS_REQUIRED()
     inode_init_owner(&init_user_ns, inode, dir, mode);
 #else
