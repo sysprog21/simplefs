@@ -152,8 +152,6 @@ struct simplefs_extent
 
 ## TODO
 
-- Bugs
-    - Fail to show `.` and `..` with `ls -a` command
 - journalling support
 
 ## License
