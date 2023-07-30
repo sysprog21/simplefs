@@ -90,6 +90,12 @@ static int write_inode_store(int fd, struct superblock *sb)
     uint32_t first_data_block = 1 + le32toh(sb->info.nr_bfree_blocks) +
                                 le32toh(sb->info.nr_ifree_blocks) +
                                 le32toh(sb->info.nr_istore_blocks);
+    /*
+     * Use inode 1 for root.
+     * If system use glibc, readdir will skip inode 0, and vfs also avoid
+     * using inode 0
+     */
+    inode += 1;
     inode->i_mode = htole32(S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH | S_IWUSR |
                             S_IWGRP | S_IXUSR | S_IXGRP | S_IXOTH);
     inode->i_uid = 0;
@@ -140,7 +146,7 @@ static int write_ifree_blocks(int fd, struct superblock *sb)
     memset(ifree, 0xff, SIMPLEFS_BLOCK_SIZE);
 
     /* First ifree block, containing first used inode */
-    ifree[0] = htole64(0xfffffffffffffffe);
+    ifree[0] = htole64(0xfffffffffffffffc);
     int ret = write(fd, ifree, SIMPLEFS_BLOCK_SIZE);
     if (ret != SIMPLEFS_BLOCK_SIZE) {
         ret = -1;

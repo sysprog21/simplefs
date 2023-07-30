@@ -277,7 +277,7 @@ int simplefs_fill_super(struct super_block *sb, void *data, int silent)
     }
 
     /* Create root inode */
-    root_inode = simplefs_iget(sb, 0);
+    root_inode = simplefs_iget(sb, 1);
     if (IS_ERR(root_inode)) {
         ret = PTR_ERR(root_inode);
         goto free_bfree;
