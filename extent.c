@@ -5,7 +5,7 @@
 
 /*
  * Search the extent which contain the target block.
- * Retrun the first unused file index if not found.
+ * Return the first unused file index if not found.
  * Return -1 if it is out of range.
  * TODO: use binary search.
  */
