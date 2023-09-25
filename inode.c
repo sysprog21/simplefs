@@ -54,8 +54,14 @@ struct inode *simplefs_iget(struct super_block *sb, unsigned long ino)
     i_uid_write(inode, le32_to_cpu(cinode->i_uid));
     i_gid_write(inode, le32_to_cpu(cinode->i_gid));
     inode->i_size = le32_to_cpu(cinode->i_size);
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0)
+    inode_set_ctime(inode, (time64_t) le32_to_cpu(cinode->i_ctime), 0);
+#else
     inode->i_ctime.tv_sec = (time64_t) le32_to_cpu(cinode->i_ctime);
     inode->i_ctime.tv_nsec = 0;
+#endif
+
     inode->i_atime.tv_sec = (time64_t) le32_to_cpu(cinode->i_atime);
     inode->i_atime.tv_nsec = 0;
     inode->i_mtime.tv_sec = (time64_t) le32_to_cpu(cinode->i_mtime);
@@ -169,6 +175,10 @@ static struct inode *simplefs_new_inode(struct inode *dir, mode_t mode)
     uint32_t ino, bno;
     int ret;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0)
+    struct timespec64 cur_time;
+#endif
+
     /* Check mode before doing anything to avoid undoing everything */
     if (!S_ISDIR(mode) && !S_ISREG(mode) && !S_ISLNK(mode)) {
         pr_err(
@@ -203,7 +213,14 @@ static struct inode *simplefs_new_inode(struct inode *dir, mode_t mode)
         inode_init_owner(inode, dir, mode);
 #endif
         set_nlink(inode, 1);
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0)
+        cur_time = current_time(inode);
+        inode->i_atime = inode->i_mtime = cur_time;
+        inode_set_ctime_to_ts(inode, cur_time);
+#else
         inode->i_ctime = inode->i_atime = inode->i_mtime = current_time(inode);
+#endif
         inode->i_op = &symlink_inode_ops;
         return inode;
     }
@@ -239,7 +256,13 @@ static struct inode *simplefs_new_inode(struct inode *dir, mode_t mode)
         set_nlink(inode, 1);
     }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0)
+    cur_time = current_time(inode);
+    inode->i_atime = inode->i_mtime = cur_time;
+    inode_set_ctime_to_ts(inode, cur_time);
+#else
     inode->i_ctime = inode->i_atime = inode->i_mtime = current_time(inode);
+#endif
 
     return inode;
 
@@ -284,6 +307,11 @@ static int simplefs_create(struct inode *dir,
     struct simplefs_dir_block *dblock;
     char *fblock;
     struct buffer_head *bh, *bh2;
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0)
+    struct timespec64 cur_time;
+#endif
+
     int ret = 0, alloc = false, bno = 0;
     int ei = 0, bi = 0, fi = 0;
 
@@ -365,7 +393,15 @@ static int simplefs_create(struct inode *dir,
 
     /* Update stats and mark dir and new inode dirty */
     mark_inode_dirty(inode);
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0)
+    cur_time = current_time(dir);
+    dir->i_mtime = dir->i_atime = cur_time;
+    inode_set_ctime_to_ts(dir, cur_time);
+#else
     dir->i_mtime = dir->i_atime = dir->i_ctime = current_time(dir);
+#endif
+
     if (S_ISDIR(mode))
         inc_nlink(dir);
     mark_inode_dirty(dir);
@@ -480,6 +516,9 @@ static int simplefs_unlink(struct inode *dir, struct dentry *dentry)
     struct inode *inode = d_inode(dentry);
     struct buffer_head *bh = NULL, *bh2 = NULL;
     struct simplefs_file_ei_block *file_block = NULL;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0)
+    struct timespec64 cur_time;
+#endif
     int ei = 0, bi = 0;
     int ret = 0;
 
@@ -494,7 +533,14 @@ static int simplefs_unlink(struct inode *dir, struct dentry *dentry)
         goto clean_inode;
 
     /* Update inode stats */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0)
+    cur_time = current_time(dir);
+    dir->i_mtime = dir->i_atime = cur_time;
+    inode_set_ctime_to_ts(dir, cur_time);
+#else
     dir->i_mtime = dir->i_atime = dir->i_ctime = current_time(dir);
+#endif
+
     if (S_ISDIR(inode->i_mode)) {
         drop_nlink(dir);
         drop_nlink(inode);
@@ -554,7 +600,14 @@ clean_inode:
     i_uid_write(inode, 0);
     i_gid_write(inode, 0);
     inode->i_mode = 0;
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0)
+    inode->i_mtime.tv_sec = inode->i_atime.tv_sec = 0;
+    inode_set_ctime(inode, 0, 0);
+#else
     inode->i_ctime.tv_sec = inode->i_mtime.tv_sec = inode->i_atime.tv_sec = 0;
+#endif
+
     drop_nlink(inode);
     mark_inode_dirty(inode);
 
@@ -593,6 +646,11 @@ static int simplefs_rename(struct inode *old_dir,
     struct buffer_head *bh_new = NULL, *bh2 = NULL;
     struct simplefs_file_ei_block *eblock_new = NULL;
     struct simplefs_dir_block *dblock = NULL;
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0)
+    struct timespec64 cur_time;
+#endif
+
     int new_pos = -1, ret = 0;
     int ei = 0 , bi = 0, fi = 0, bno = 0;
 
@@ -685,8 +743,14 @@ static int simplefs_rename(struct inode *old_dir,
     brelse(bh2);
 
     /* Update new parent inode metadata */
-    new_dir->i_atime = new_dir->i_ctime = new_dir->i_mtime =
-        current_time(new_dir);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0)
+    cur_time = current_time(new_dir);
+    new_dir->i_atime = new_dir->i_mtime = cur_time;
+    inode_set_ctime_to_ts(new_dir, cur_time);
+#else
+    new_dir->i_atime = new_dir->i_ctime = new_dir->i_mtime = current_time(new_dir);
+#endif
+
     if (S_ISDIR(src->i_mode))
         inc_nlink(new_dir);
     mark_inode_dirty(new_dir);
@@ -697,8 +761,14 @@ static int simplefs_rename(struct inode *old_dir,
         goto release_new;
 
     /* Update old parent inode metadata */
-    old_dir->i_atime = old_dir->i_ctime = old_dir->i_mtime =
-        current_time(old_dir);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0)
+    cur_time = current_time(old_dir);
+    old_dir->i_atime = old_dir->i_mtime = cur_time;
+    inode_set_ctime_to_ts(old_dir, cur_time);
+#else
+    old_dir->i_atime = old_dir->i_ctime = old_dir->i_mtime = current_time(old_dir);
+#endif
+
     if (S_ISDIR(src->i_mode))
         drop_nlink(old_dir);
     mark_inode_dirty(old_dir);

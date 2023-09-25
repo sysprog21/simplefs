@@ -168,6 +168,9 @@ static int simplefs_write_end(struct file *file,
     struct inode *inode = file->f_inode;
     struct simplefs_inode_info *ci = SIMPLEFS_INODE(inode);
     struct super_block *sb = inode->i_sb;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0)
+    struct timespec64 cur_time;
+#endif
     uint32_t nr_blocks_old;
 
     /* Complete the write() */
@@ -181,7 +184,15 @@ static int simplefs_write_end(struct file *file,
 
     /* Update inode metadata */
     inode->i_blocks = inode->i_size / SIMPLEFS_BLOCK_SIZE + 2;
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0)
+    cur_time = current_time(inode);
+    inode->i_mtime = cur_time;
+    inode_set_ctime_to_ts(inode, cur_time);
+#else
     inode->i_mtime = inode->i_ctime = current_time(inode);
+#endif
+
     mark_inode_dirty(inode);
 
     /* If file is smaller than before, free unused blocks */
