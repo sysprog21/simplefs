@@ -168,6 +168,9 @@ static struct inode *simplefs_new_inode(struct inode *dir, mode_t mode)
     struct simplefs_sb_info *sbi;
     uint32_t ino, bno;
     int ret;
+#ifdef TRACE_CALLS
+    printk("simplefs_new_inode");
+#endif
 
     /* Check mode before doing anything to avoid undoing everything */
     if (!S_ISDIR(mode) && !S_ISREG(mode) && !S_ISLNK(mode)) {
@@ -196,7 +199,7 @@ static struct inode *simplefs_new_inode(struct inode *dir, mode_t mode)
 
     if (S_ISLNK(mode)) {
 #if USER_NS_REQUIRED()
-        inode_init_owner(&init_user_ns, inode, dir, mode);
+        inode_init_owner(&nop_mnt_idmap, inode, dir, mode);
 #else
         inode_init_owner(inode, dir, mode);
 #endif
@@ -217,7 +220,7 @@ static struct inode *simplefs_new_inode(struct inode *dir, mode_t mode)
 
     /* Initialize inode */
 #if USER_NS_REQUIRED()
-    inode_init_owner(&init_user_ns, inode, dir, mode);
+    inode_init_owner(&nop_mnt_idmap, inode, dir, mode);
 #else
     inode_init_owner(inode, dir, mode);
 #endif
@@ -255,7 +258,7 @@ put_ino:
  *   - add new file/directory in parent index
  */
 #if USER_NS_REQUIRED()
-static int simplefs_create(struct user_namespace *ns,
+static int simplefs_create(struct mnt_idmap *ns,
                            struct inode *dir,
                            struct dentry *dentry,
                            umode_t mode,
@@ -276,6 +279,10 @@ static int simplefs_create(struct inode *dir,
     struct buffer_head *bh, *bh2;
     int ret = 0, alloc = false, bno = 0;
     int ei = 0, bi = 0, fi = 0;
+
+#ifdef TRACE_CALLS
+    printk("simplefs_create");
+#endif
 
     /* Check filename length */
     if (strlen(dentry->d_name.name) > SIMPLEFS_FILENAME_LEN)
@@ -390,6 +397,10 @@ static int simplefs_remove_from_dir(struct inode *dir, struct dentry *dentry)
     int ei = 0, bi = 0, fi = 0;
     int ret = 0, found = false;
 
+#ifdef TRACE_CALLS
+    printk("simplefs_remove_from_dir");
+#endif
+
     /* Read parent directory index */
     bh = sb_bread(sb, SIMPLEFS_INODE(dir)->ei_block);
     if (!bh)
@@ -476,6 +487,10 @@ static int simplefs_unlink(struct inode *dir, struct dentry *dentry)
     uint32_t ino = inode->i_ino;
     uint32_t bno = 0;
 
+#ifdef TRACE_CALLS
+    printk("simplefs_unlink");
+#endif
+
     ret = simplefs_remove_from_dir(dir, dentry);
     if (ret != 0)
         return ret;
@@ -556,7 +571,7 @@ clean_inode:
 }
 
 #if USER_NS_REQUIRED()
-static int simplefs_rename(struct user_namespace *ns,
+static int simplefs_rename(struct mnt_idmap *ns,
                            struct inode *old_dir,
                            struct dentry *old_dentry,
                            struct inode *new_dir,
@@ -578,6 +593,10 @@ static int simplefs_rename(struct inode *old_dir,
     struct simplefs_dir_block *dblock = NULL;
     int new_pos = -1, ret = 0;
     int ei = 0 , bi = 0, fi = 0, bno = 0;
+
+#ifdef TRACE_CALLS
+    printk("simplefs_rename");
+#endif
 
     /* fail with these unsupported flags */
     if (flags & (RENAME_EXCHANGE | RENAME_WHITEOUT))
@@ -700,11 +719,14 @@ release_new:
 }
 
 #if USER_NS_REQUIRED()
-static int simplefs_mkdir(struct user_namespace *ns,
+static int simplefs_mkdir(struct mnt_idmap *ns,
                           struct inode *dir,
                           struct dentry *dentry,
                           umode_t mode)
 {
+#ifdef TRACE_CALLS
+    printk("simplefs_mkdir");
+#endif
     return simplefs_create(ns, dir, dentry, mode | S_IFDIR, 0);
 }
 #else
@@ -712,6 +734,9 @@ static int simplefs_mkdir(struct inode *dir,
                           struct dentry *dentry,
                           umode_t mode)
 {
+#ifdef TRACE_CALLS
+    printk("simplefs_mkdir");
+#endif
     return simplefs_create(dir, dentry, mode | S_IFDIR, 0);
 }
 #endif
@@ -722,6 +747,10 @@ static int simplefs_rmdir(struct inode *dir, struct dentry *dentry)
     struct inode *inode = d_inode(dentry);
     struct buffer_head *bh;
     struct simplefs_file_ei_block *eblock;
+
+#ifdef TRACE_CALLS
+    printk("simplefs_rmdir");
+#endif
 
     /* If the directory is not empty, fail */
     if (inode->i_nlink > 2)
@@ -816,7 +845,7 @@ end:
 }
 
 #if USER_NS_REQUIRED()
-static int simplefs_symlink(struct user_namespace *ns,
+static int simplefs_symlink(struct mnt_idmap *ns,
                             struct inode *dir,
                             struct dentry *dentry,
                             const char *symname)
@@ -836,6 +865,10 @@ static int simplefs_symlink(struct inode *dir,
     struct buffer_head *bh = NULL, *bh2 = NULL;
     int ret= 0, alloc = false, bno = 0;
     int ei = 0, bi = 0, fi = 0;
+
+#ifdef TRACE_CALLS
+    printk("simplefs_symlink");
+#endif
 
     /* Check if symlink content is not too long */
     if (l > sizeof(ci->i_data))
@@ -912,6 +945,9 @@ static const char *simplefs_get_link(struct dentry *dentry,
                                      struct inode *inode,
                                      struct delayed_call *done)
 {
+#ifdef TRACE_CALLS
+    printk("simplefs_get_link");
+#endif
     return inode->i_link;
 }
 

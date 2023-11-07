@@ -81,9 +81,9 @@ brelse_index:
  * Called by the page cache to read a page from the physical disk and map it in
  * memory.
  */
-static int simplefs_readpage(struct file *file, struct page *page)
+static void simplefs_readahead(struct readahead_control * rac)
 {
-    return mpage_readpage(page, simplefs_file_get_block);
+    mpage_readahead(rac, simplefs_file_get_block);
 }
 
 /*
@@ -104,7 +104,6 @@ static int simplefs_write_begin(struct file *file,
                                 struct address_space *mapping,
                                 loff_t pos,
                                 unsigned int len,
-                                unsigned int flags,
                                 struct page **pagep,
                                 void **fsdata)
 {
@@ -124,7 +123,7 @@ static int simplefs_write_begin(struct file *file,
         return -ENOSPC;
 
     /* prepare the write */
-    err = block_write_begin(mapping, pos, len, flags, pagep,
+    err = block_write_begin(mapping, pos, len, pagep,
                             simplefs_file_get_block);
     /* if this failed, reclaim newly allocated blocks */
     if (err < 0)
@@ -204,7 +203,7 @@ end:
 }
 
 const struct address_space_operations simplefs_aops = {
-    .readpage = simplefs_readpage,
+    .readahead = simplefs_readahead,
     .writepage = simplefs_writepage,
     .write_begin = simplefs_write_begin,
     .write_end = simplefs_write_end,

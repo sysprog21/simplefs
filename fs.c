@@ -25,6 +25,9 @@ struct dentry *simplefs_mount(struct file_system_type *fs_type,
 /* Unmount a simplefs partition */
 void simplefs_kill_sb(struct super_block *sb)
 {
+#ifdef TRACE_CALLS
+    printk("simplefs_kill_sb");
+#endif
     kill_block_super(sb);
 
     pr_info("unmounted disk\n");

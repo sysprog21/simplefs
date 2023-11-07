@@ -13,8 +13,8 @@ static struct kmem_cache *simplefs_inode_cache;
 
 int simplefs_init_inode_cache(void)
 {
-    simplefs_inode_cache = kmem_cache_create(
-        "simplefs_cache", sizeof(struct simplefs_inode_info), 0, 0, NULL);
+    simplefs_inode_cache = kmem_cache_create_usercopy(
+        "simplefs_cache", sizeof(struct simplefs_inode_info), 0, 0, 0, sizeof(struct simplefs_inode_info), NULL);
     if (!simplefs_inode_cache)
         return -ENOMEM;
     return 0;
@@ -54,12 +54,18 @@ static int simplefs_write_inode(struct inode *inode,
     uint32_t inode_block = (ino / SIMPLEFS_INODES_PER_BLOCK) + 1;
     uint32_t inode_shift = ino % SIMPLEFS_INODES_PER_BLOCK;
 
-    if (ino >= sbi->nr_inodes)
+#ifdef TRACE_CALLS
+    printk("simplefs_write_inode");
+#endif
+
+    if (ino >= sbi->nr_inodes) {
         return 0;
+    }
 
     bh = sb_bread(sb, inode_block);
-    if (!bh)
+    if (!bh) {
         return -EIO;
+    }
 
     disk_inode = (struct simplefs_inode *) bh->b_data;
     disk_inode += inode_shift;
@@ -75,6 +81,10 @@ static int simplefs_write_inode(struct inode *inode,
     disk_inode->i_blocks = inode->i_blocks;
     disk_inode->i_nlink = inode->i_nlink;
     disk_inode->ei_block = ci->ei_block;
+
+    //! I node with counter negative, generate a crash, this is not a fix is a workaround. My guess is that there is a double release somewhere
+    //! I still did not tracked yet
+    if (inode->i_count.counter < 0)	{inode->i_count.counter = 0;}
     strncpy(disk_inode->i_data, ci->i_data, sizeof(ci->i_data));
 
     mark_buffer_dirty(bh);
@@ -86,7 +96,11 @@ static int simplefs_write_inode(struct inode *inode,
 
 static void simplefs_put_super(struct super_block *sb)
 {
+#ifdef TRACE_CALLS
+    printk("simplefs_put_super");
+#endif
     struct simplefs_sb_info *sbi = SIMPLEFS_SB(sb);
+
     if (sbi) {
         kfree(sbi->ifree_bitmap);
         kfree(sbi->bfree_bitmap);
@@ -283,7 +297,7 @@ int simplefs_fill_super(struct super_block *sb, void *data, int silent)
         goto free_bfree;
     }
 #if USER_NS_REQUIRED()
-    inode_init_owner(&init_user_ns, root_inode, NULL, root_inode->i_mode);
+    inode_init_owner(&nop_mnt_idmap, root_inode, NULL, root_inode->i_mode);
 #else
     inode_init_owner(root_inode, NULL, root_inode->i_mode);
 #endif

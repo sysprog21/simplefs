@@ -9,7 +9,7 @@ D_MOD="drwxr-xr-x"
 F_MOD="-rw-r--r--"
 S_MOD="lrwxrwxrwx"
 MAXFILESIZE=11173888 # SIMPLEFS_MAX_EXTENTS * SIMPLEFS_MAX_BLOCKS_PER_EXTENT * SIMPLEFS_BLOCK_SIZE
-MAXFILES=40920        # max files per dir
+MAXFILES=40918        # max files per dir, minus 2 because we already create two files in the directory
 
 test_op() {
     local op=$1 
@@ -24,7 +24,7 @@ check_exist() {
     local name=$3
     echo
     echo -n "Check if exist: $mode $nlink $name..."
-    sudo ls -lR  | grep -e "$mode $nlink".*$name >/dev/null && echo "Success" || \
+    sudo ls -lR  | grep -e "$mode\. $nlink".*$name >/dev/null && echo "Success" || \
     echo "Failed" 
 }
 
@@ -53,14 +53,18 @@ test_op 'mkdir dir' # expected to fail
 # create file
 test_op 'touch file'
 
+
 # create 40920 files
-for ((i=0; i<=$MAXFILES; i++))
+for ((i=0; i<$MAXFILES; i++))
 do
     test_op "touch $i.txt" # expected to fail with more than 40920 files
 done
+
 filecnts=$(ls | wc -w)
+((filecnts -= 2))
 test $filecnts -eq $MAXFILES || echo "Failed, it should be $MAXFILES files"
 find . -name '[0-9]*.txt' | xargs -n 2000 sudo rm
+
 
 # hard link
 test_op 'ln file hdlink'
@@ -83,15 +87,16 @@ test $(cat file) = "abc" || echo "Failed to write"
 
 # file too large
 test_op 'dd if=/dev/zero of=file bs=1M count=12 status=none'
-filesize=$(sudo ls -lR  | grep -e "$F_MOD 2".*file | awk '{print $5}')
-test $filesize -le $MAXFILESIZE || echo "Failed, file size over the limit"
+filesize=$(sudo ls -lR  | grep -e "${F_MOD}. 1".*file | awk '{print $5}')
+test_op $filesize -le $MAXFILESIZE || echo "Failed, file size over the limit"
 
 # test if exist
 check_exist $D_MOD 3 dir 
-check_exist $F_MOD 2 file
+check_exist $F_MOD 1 file
 check_exist $F_MOD 2 hdlink
 check_exist $D_MOD 2 dir
 check_exist $S_MOD 1 symlink 
+
 
 sleep 1
 popd >/dev/null
