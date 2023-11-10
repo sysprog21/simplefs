@@ -185,7 +185,7 @@ static int simplefs_write_end(struct file *file,
     /* Update inode metadata */
     inode->i_blocks = inode->i_size / SIMPLEFS_BLOCK_SIZE + 2;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
     cur_time = current_time(inode);
     inode->i_mtime = cur_time;
     inode_set_ctime_to_ts(inode, cur_time);

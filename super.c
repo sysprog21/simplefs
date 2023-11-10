@@ -70,7 +70,7 @@ static int simplefs_write_inode(struct inode *inode,
     disk_inode->i_gid = i_gid_read(inode);
     disk_inode->i_size = inode->i_size;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
     struct timespec64 ctime = inode_get_ctime(inode);
     disk_inode->i_ctime = ctime.tv_sec;
 #else
