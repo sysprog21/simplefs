@@ -13,8 +13,11 @@ static struct kmem_cache *simplefs_inode_cache;
 
 int simplefs_init_inode_cache(void)
 {
-    simplefs_inode_cache = kmem_cache_create(
-        "simplefs_cache", sizeof(struct simplefs_inode_info), 0, 0, NULL);
+    simplefs_inode_cache = kmem_cache_create_usercopy(
+        "simplefs_cache", sizeof(struct simplefs_inode_info), 0, 0,
+        0,
+        sizeof(struct simplefs_inode_info),
+        NULL);
     if (!simplefs_inode_cache)
         return -ENOMEM;
     return 0;
