@@ -3,7 +3,6 @@
 #include <linux/fs.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
-
 #include "simplefs.h"
 
 /* Mount a simplefs partition */
@@ -71,7 +70,6 @@ static void __exit simplefs_exit(void)
 
 module_init(simplefs_init);
 module_exit(simplefs_exit);
-
 MODULE_LICENSE("Dual BSD/GPL");
 MODULE_AUTHOR("National Cheng Kung University, Taiwan");
 MODULE_DESCRIPTION("a simple file system");
