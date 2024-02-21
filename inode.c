@@ -897,6 +897,7 @@ static int simplefs_link(struct dentry *old_dentry,
     brelse(bh);
 
     inode_inc_link_count(inode);
+    ihold(inode);
     d_instantiate(dentry, inode);
     return ret;
 
