@@ -1,0 +1,23 @@
+name: main
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
+      - name: validate coding style and functionality
+        run: |
+            sudo apt-get install -q -y clang-format-12
+            .ci/check-newline.sh
+            .ci/check-format.sh
+            .ci/build-n-run.sh
+        shell: bash
