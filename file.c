@@ -9,9 +9,10 @@
 #include "bitmap.h"
 #include "simplefs.h"
 
-/* Map the buffer_head passed in argument with the iblock-th block of the file
- * represented by inode. If the requested block is not allocated and create is
- * true,  allocate a new block on disk and map it.
+/* Associate the provided 'buffer_head' parameter with the iblock-th block of
+ * the file denoted by inode. Should the specified block be unallocated and the
+ * create flag is set to true, proceed to allocate a new block on the disk and
+ * establish a mapping for it.
  */
 static int simplefs_file_get_block(struct inode *inode,
                                    sector_t iblock,
@@ -23,7 +24,6 @@ static int simplefs_file_get_block(struct inode *inode,
     struct simplefs_inode_info *ci = SIMPLEFS_INODE(inode);
     struct simplefs_file_ei_block *index;
     struct buffer_head *bh_index;
-    bool alloc = false;
     int ret = 0, bno;
     uint32_t extent;
 
@@ -43,12 +43,15 @@ static int simplefs_file_get_block(struct inode *inode,
         goto brelse_index;
     }
 
-    /* Check if iblock is already allocated. If not and create is true,
-     * allocate it. Else, get the physical block number.
+    /* Determine whether the 'iblock' is currently allocated. If it is not and
+     * the create parameter is set to true, then allocate the block. Otherwise,
+     * retrieve the physical block number.
      */
     if (index->extents[extent].ee_start == 0) {
-        if (!create)
-            return 0;
+        if (!create) {
+            ret = 0;
+            goto brelse_index;
+        }
         bno = get_free_blocks(sbi, 8);
         if (!bno) {
             ret = -ENOSPC;
@@ -61,13 +64,12 @@ static int simplefs_file_get_block(struct inode *inode,
             extent ? index->extents[extent - 1].ee_block +
                          index->extents[extent - 1].ee_len
                    : 0;
-        alloc = true;
     } else {
         bno = index->extents[extent].ee_start + iblock -
               index->extents[extent].ee_block;
     }
 
-    /* Map the physical block to to the given buffer_head */
+    /* Map the physical block to the given 'buffer_head'. */
     map_bh(bh_result, sb, bno);
 
 brelse_index:
