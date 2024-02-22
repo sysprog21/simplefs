@@ -78,8 +78,8 @@ brelse_index:
     return ret;
 }
 
-/* Called by the page cache to read a page from the physical disk and map it in
- * memory.
+/* Called by the page cache to read a page from the physical disk and map it
+ * into memory.
  */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
 static void simplefs_readahead(struct readahead_control *rac)
@@ -101,9 +101,9 @@ static int simplefs_writepage(struct page *page, struct writeback_control *wbc)
     return block_write_full_page(page, simplefs_file_get_block, wbc);
 }
 
-/* Called by the VFS when a write() syscall occurs on file before writing the
- * data in the page cache. This functions checks if the write will be able to
- * complete and allocates the necessary blocks through block_write_begin().
+/* Called by the VFS when a write() syscall is made on a file, before writing
+ * the data into the page cache. This function checks if the write operation
+ * can complete and allocates the necessary blocks through block_write_begin().
  */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
 static int simplefs_write_begin(struct file *file,
@@ -152,7 +152,7 @@ static int simplefs_write_begin(struct file *file,
 }
 
 /* Called by the VFS after writing data from a write() syscall to the page
- * cache. This functions updates inode metadata and truncates the file if
+ * cache. This function updates inode metadata and truncates the file if
  * necessary.
  */
 static int simplefs_write_end(struct file *file,

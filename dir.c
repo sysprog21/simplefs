@@ -7,9 +7,9 @@
 
 #include "simplefs.h"
 
-/* Iterate over the files contained in dir and commit them in ctx.
- * This function is called by the VFS while ctx->pos changes.
- * Return 0 on success.
+/* Iterate over the files contained in dir and commit them to @ctx.
+ * This function is called by the VFS as ctx->pos changes.
+ * Returns 0 on success.
  */
 static int simplefs_iterate(struct file *dir, struct dir_context *ctx)
 {

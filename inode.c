@@ -96,9 +96,11 @@ failed:
     return ERR_PTR(ret);
 }
 
-/* Look for dentry in dir.
- * Fill dentry with NULL if not in dir, with the corresponding inode if found.
- * Returns NULL on success.
+/* Searches for a dentry in dir.
+ * Fills dentry with NULL if not found in dir, or with the corresponding inode
+ * if found.
+ * Returns NULL on success, indicating the dentry was successfully filled or
+ * confirmed absent.
  */
 static struct dentry *simplefs_lookup(struct inode *dir,
                                       struct dentry *dentry,
@@ -554,10 +556,11 @@ static int simplefs_unlink(struct inode *dir, struct dentry *dentry)
         return ret;
     }
 
-    /* Cleanup pointed blocks if unlinking a file. If we fail to read the
-     * index block, cleanup inode anyway and lose this file's blocks
-     * forever. If we fail to scrub a data block, don't fail (too late
-     * anyway), just put the block and continue.
+    /* Cleans up pointed blocks when unlinking a file. If reading the index
+     * block fails, the inode is cleaned up regardless, resulting in the
+     * permanent loss of this file's blocks. If scrubbing a data block fails,
+     * do not terminate the operation (as it is already too late); instead,
+     * release the block and proceed.
      */
     bno = SIMPLEFS_INODE(inode)->ei_block;
     bh = sb_bread(sb, bno);
