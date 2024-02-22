@@ -1,23 +1,28 @@
 name: main
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-
-  workflow_dispatch:
+on: [push, pull_request]
 
 jobs:
-  validate:
+  simplefs:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: install-dependencies
+      run: |
+            sudo apt-get install build-essential
+    - name: automated test
+      run: |
+          .ci/build-n-run.sh
+      shell: bash
+
+  coding_style:
     runs-on: ubuntu-latest
     steps:
       - name: checkout code
         uses: actions/checkout@v4
-      - name: validate coding style and functionality
+      - name: coding convention
         run: |
             sudo apt-get install -q -y clang-format-12
             .ci/check-newline.sh
             .ci/check-format.sh
-            .ci/build-n-run.sh
         shell: bash

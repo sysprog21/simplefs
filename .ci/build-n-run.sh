@@ -7,7 +7,7 @@ function build_mod()
 
 function run_tests()
 {
-    make check || exit 2
+    make check >/tmp/simplefs-out || (cat /tmp/simplefs-out ; exit 2)
 }
 
 build_mod
