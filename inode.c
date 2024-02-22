@@ -472,7 +472,8 @@ static int simplefs_remove_from_dir(struct inode *dir, struct dentry *dentry)
             }
             /* Remove file from parent directory */
             for (fi = 0; fi < SIMPLEFS_FILES_PER_BLOCK; fi++) {
-                if (dblock->files[fi].inode == inode->i_ino) {
+                if (dblock->files[fi].inode == inode->i_ino &&
+                    !strcmp(dblock->files[fi].filename, dentry->d_name.name) ) {
                     found = true;
                     if (fi != SIMPLEFS_FILES_PER_BLOCK - 1) {
                         memmove(dblock->files + fi, dblock->files + fi + 1,
@@ -896,6 +897,7 @@ static int simplefs_link(struct dentry *old_dentry,
     brelse(bh);
 
     inode_inc_link_count(inode);
+    ihold(inode);
     d_instantiate(dentry, inode);
     return ret;
 
