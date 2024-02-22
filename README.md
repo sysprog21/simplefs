@@ -13,14 +13,14 @@ tables for inodes and files are set when the inode is accessed. The initial step
 before accessing an inode involves a lookup process. The inode for a file is
 identified by invoking the lookup handler of the parent inode.
 
-## Current features
+## Features
 
 * Directories: create, remove, list, rename;
 * Regular files: create, remove, read/write (through page cache), rename;
 * Hard/Symbolic links (also symlink or soft link): create, remove, rename;
 * No extended attribute support
 
-## Prerequisite
+## Prerequisites
 
 Install linux kernel header in advance.
 ```shell
@@ -84,11 +84,20 @@ At present, simplefs only provides straightforward features.
 Each block is 4 KiB large.
 
 ### Superblock
-The superblock is the first block of the partition (block 0). It contains the partition's metadata, such as the number of blocks, number of inodes, number of free inodes/blocks, ...
+The superblock, located at the first block of the partition (block 0), stores
+the partition's metadata. This includes the total number of blocks, the total
+number of inodes, and the counts of free inodes and blocks.
 
 ### Inode store
-Contains all the inodes of the partition. The maximum number of inodes is equal to the number of blocks of the partition. Each inode contains 72 B of data: standard data such as file size and number of used blocks, as well as a simplefs-specific field `ei_block`. This block contains:
-  - for a directory: the list of files in this directory. A directory can contain at most 40920 files, and filenames are limited to 255 characters to fit in a single block.
+This section contains all the inodes of the partition, with the maximum number
+of inodes being equal to the number of blocks in the partition. Each inode
+occupies 72 bytes of data, encompassing standard information such as the file
+size and the number of blocks used, in addition to a simplefs-specific field
+named `ei_block`. This field, `ei_block`, serves different purposes depending
+on the type of file:
+  - For a directory, it contains the list of files within that directory.
+    A directory can hold a maximum of 40,920 files, with filenames restricted
+    to a maximum of 255 characters to ensure they fit within a single block.
   ```
   inode
   +-----------------------+
@@ -110,7 +119,10 @@ Contains all the inodes of the partition. The maximum number of inodes is equal 
                                       +----------------+
 
   ```
-  - for a file: the list of extents containing the actual data of this file. Since block IDs are stored as `sizeof(struct simplefs_extent)` bytes values, at most 341 links fit in a single block, limiting the size of a file to around 10.65 MiB (10912 KiB).
+  - For a file, it lists the extents that hold the actual data of the file.
+    Given that block IDs are stored as values of `sizeof(struct simplefs_extent)`
+    bytes, a single block can accommodate up to 341 links. This limitation
+    restricts the maximum size of a file to approximately 10.65 MiB (10,912 KiB).
   ```
   inode                                                
   +-----------------------+                           
@@ -137,10 +149,13 @@ Contains all the inodes of the partition. The maximum number of inodes is equal 
   ```
 
 ### Extent support
-The extent covers consecutive blocks, we allocate consecutive disk blocks for it at a single time. It is described by `struct simplefs_extent` which contains three members:
-- `ee_block`: first logical block extent covers.
-- `ee_len`: number of blocks covered by extent.
-- `ee_start`: first physical block extent covers.
+An extent spans consecutive blocks; therefore, we allocate consecutive disk blocks
+for it in a single operation. It is defined by `struct simplefs_extent`, which
+comprises three members:
+- `ee_block`: the first logical block that the extent covers.
+- `ee_len`: the number of blocks the extent covers.
+- `ee_start`: the first physical block that the extent covers."
+
 ```
 struct simplefs_extent
   +----------------+                           
@@ -155,7 +170,6 @@ struct simplefs_extent
                                  +---------+
                              211 |         |
                                  +---------+
-
 ```
 
 ## TODO
@@ -164,5 +178,5 @@ struct simplefs_extent
 
 ## License
 
-`simplefs` is released under the BSD 2 clause license. Use of this source code is governed by
-a BSD-style license that can be found in the LICENSE file.
+`simplefs` is released under the BSD 2 clause license. Use of this source code
+is governed by a BSD-style license that can be found in the LICENSE file.
