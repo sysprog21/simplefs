@@ -1,9 +1,17 @@
 # simplefs - a simple file system for Linux
 
-The file system "simplefs" is helpful to understand Linux VFS and file system basics.
-The Linux VFS supports multiple file systems. The kernel does most of the work while the file system specific tasks are delegated to the individual file systems through the handlers. Instead of calling the functions directly the kernel uses various Operation Tables, which are a collection of handlers for each operation (these are actually structures of function pointers for each handlers/callbacks). 
+The file system "simplefs" serves as a helpful tool for understanding the basics
+of the Linux Virtual File System (VFS) and fs basics. Linux VFS accommodates
+multiple file systems, with the kernel handling the bulk of the operations while
+delegating file system-specific tasks to individual file systems via handlers.
+Instead of directly invoking functions, the kernel employs various operation
+tables. These tables are collections of handlers for each operation, essentially
+structures comprised of function pointers for handlers/callbacks.
 
-The super block operations are set at the time of mounting. The operation tables for inodes and files are set when the inode is opened. The first step before opening an inode is lookup. The inode of a file is looked up by calling the lookup handler of the parent inode. 
+Super block operations are established at the time of mounting. The operation
+tables for inodes and files are set when the inode is accessed. The initial step
+before accessing an inode involves a lookup process. The inode for a file is
+identified by invoking the lookup handler of the parent inode.
 
 ## Current features
 
