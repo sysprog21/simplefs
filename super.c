@@ -14,10 +14,8 @@ static struct kmem_cache *simplefs_inode_cache;
 int simplefs_init_inode_cache(void)
 {
     simplefs_inode_cache = kmem_cache_create_usercopy(
-        "simplefs_cache", sizeof(struct simplefs_inode_info), 0, 0,
-        0,
-        sizeof(struct simplefs_inode_info),
-        NULL);
+        "simplefs_cache", sizeof(struct simplefs_inode_info), 0, 0, 0,
+        sizeof(struct simplefs_inode_info), NULL);
     if (!simplefs_inode_cache)
         return -ENOMEM;
     return 0;
@@ -79,7 +77,6 @@ static int simplefs_write_inode(struct inode *inode,
 #else
     disk_inode->i_ctime = inode->i_ctime.tv_sec;
 #endif
-
 
     disk_inode->i_atime = inode->i_atime.tv_sec;
     disk_inode->i_mtime = inode->i_mtime.tv_sec;
@@ -301,7 +298,7 @@ int simplefs_fill_super(struct super_block *sb, void *data, int silent)
 #else
     inode_init_owner(root_inode, NULL, root_inode->i_mode);
 #endif
-    
+
     sb->s_root = d_make_root(root_inode);
     if (!sb->s_root) {
         ret = -ENOMEM;

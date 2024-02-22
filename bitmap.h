@@ -2,10 +2,10 @@
 #define SIMPLEFS_BITMAP_H
 
 #include <linux/bitmap.h>
+
 #include "simplefs.h"
 
-/*
- * Return the first bit we found and clear the the following `len` consecutive
+/* Return the first bit we found and clear the the following 'len' consecutive
  * free bit(s) (set to 1) in a given in-memory bitmap spanning over multiple
  * blocks. Return 0 if no enough free bit(s) were found (we assume that the
  * first bit is never free because of the superblock and the root inode, thus
@@ -28,8 +28,7 @@ static inline uint32_t get_first_free_bits(unsigned long *freemap,
     return 0;
 }
 
-/*
- * Return an unused inode number and mark it used.
+/* Return an unused inode number and mark it used.
  * Return 0 if no free inode was found.
  */
 static inline uint32_t get_free_inode(struct simplefs_sb_info *sbi)
@@ -40,8 +39,7 @@ static inline uint32_t get_free_inode(struct simplefs_sb_info *sbi)
     return ret;
 }
 
-/*
- * Return `len` unused block(s) number and mark it used.
+/* Return 'len' unused block(s) number and mark it used.
  * Return 0 if no enough free block(s) were found.
  */
 static inline uint32_t get_free_blocks(struct simplefs_sb_info *sbi,
@@ -54,7 +52,7 @@ static inline uint32_t get_free_blocks(struct simplefs_sb_info *sbi,
 }
 
 
-/* Mark the `len` bit(s) from i-th bit in freemap as free (i.e. 1) */
+/* Mark the 'len' bit(s) from i-th bit in freemap as free (i.e. 1) */
 static inline int put_free_bits(unsigned long *freemap,
                                 unsigned long size,
                                 uint32_t i,

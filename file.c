@@ -9,8 +9,7 @@
 #include "bitmap.h"
 #include "simplefs.h"
 
-/*
- * Map the buffer_head passed in argument with the iblock-th block of the file
+/* Map the buffer_head passed in argument with the iblock-th block of the file
  * represented by inode. If the requested block is not allocated and create is
  * true,  allocate a new block on disk and map it.
  */
@@ -44,8 +43,7 @@ static int simplefs_file_get_block(struct inode *inode,
         goto brelse_index;
     }
 
-    /*
-     * Check if iblock is already allocated. If not and create is true,
+    /* Check if iblock is already allocated. If not and create is true,
      * allocate it. Else, get the physical block number.
      */
     if (index->extents[extent].ee_start == 0) {
@@ -56,6 +54,7 @@ static int simplefs_file_get_block(struct inode *inode,
             ret = -ENOSPC;
             goto brelse_index;
         }
+
         index->extents[extent].ee_start = bno;
         index->extents[extent].ee_len = 8;
         index->extents[extent].ee_block =
@@ -77,8 +76,7 @@ brelse_index:
     return ret;
 }
 
-/*
- * Called by the page cache to read a page from the physical disk and map it in
+/* Called by the page cache to read a page from the physical disk and map it in
  * memory.
  */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
@@ -93,8 +91,7 @@ static int simplefs_readpage(struct file *file, struct page *page)
 }
 #endif
 
-/*
- * Called by the page cache to write a dirty page to the physical disk (when
+/* Called by the page cache to write a dirty page to the physical disk (when
  * sync is called or when memory is needed).
  */
 static int simplefs_writepage(struct page *page, struct writeback_control *wbc)
@@ -102,8 +99,7 @@ static int simplefs_writepage(struct page *page, struct writeback_control *wbc)
     return block_write_full_page(page, simplefs_file_get_block, wbc);
 }
 
-/*
- * Called by the VFS when a write() syscall occurs on file before writing the
+/* Called by the VFS when a write() syscall occurs on file before writing the
  * data in the page cache. This functions checks if the write will be able to
  * complete and allocates the necessary blocks through block_write_begin().
  */
@@ -131,6 +127,7 @@ static int simplefs_write_begin(struct file *file,
     /* Check if the write can be completed (enough space?) */
     if (pos + len > SIMPLEFS_MAX_FILESIZE)
         return -ENOSPC;
+
     nr_allocs = max(pos + len, file->f_inode->i_size) / SIMPLEFS_BLOCK_SIZE;
     if (nr_allocs > file->f_inode->i_blocks - 1)
         nr_allocs -= file->f_inode->i_blocks - 1;
@@ -139,7 +136,7 @@ static int simplefs_write_begin(struct file *file,
     if (nr_allocs > sbi->nr_free_blocks)
         return -ENOSPC;
 
-    /* prepare the write */
+        /* prepare the write */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
     err = block_write_begin(mapping, pos, len, pagep, simplefs_file_get_block);
 #else
@@ -152,8 +149,7 @@ static int simplefs_write_begin(struct file *file,
     return err;
 }
 
-/*
- * Called by the VFS after writing data from a write() syscall to the page
+/* Called by the VFS after writing data from a write() syscall to the page
  * cache. This functions updates inode metadata and truncates the file if
  * necessary.
  */
@@ -216,6 +212,7 @@ static int simplefs_write_end(struct file *file,
         index = (struct simplefs_file_ei_block *) bh_index->b_data;
 
         first_ext = simplefs_ext_search(index, inode->i_blocks - 1);
+
         /* Reserve unused block in last extent */
         if (inode->i_blocks - 1 != index->extents[first_ext].ee_block)
             first_ext++;

@@ -1,11 +1,11 @@
 #include <fcntl.h>
+#include <linux/fs.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
-#include <linux/fs.h>
 #include <unistd.h>
 
 #include "simplefs.h"
@@ -90,8 +90,8 @@ static int write_inode_store(int fd, struct superblock *sb)
     uint32_t first_data_block = 1 + le32toh(sb->info.nr_bfree_blocks) +
                                 le32toh(sb->info.nr_ifree_blocks) +
                                 le32toh(sb->info.nr_istore_blocks);
-    /*
-     * Use inode 1 for root.
+
+    /* Use inode 1 for root.
      * If system use glibc, readdir will skip inode 0, and vfs also avoid
      * using inode 0
      */
@@ -184,8 +184,7 @@ static int write_bfree_blocks(int fd, struct superblock *sb)
         return -1;
     uint64_t *bfree = (uint64_t *) block;
 
-    /*
-     * First blocks (incl. sb + istore + ifree + bfree + 1 used block)
+    /* First blocks (incl. sb + istore + ifree + bfree + 1 used block)
      * we suppose it won't go further than the first block
      */
     memset(bfree, 0xff, SIMPLEFS_BLOCK_SIZE);

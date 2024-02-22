@@ -10,27 +10,25 @@
 #define SIMPLEFS_MAX_EXTENTS \
     ((SIMPLEFS_BLOCK_SIZE - sizeof(uint32_t)) / sizeof(struct simplefs_extent))
 #define SIMPLEFS_MAX_BLOCKS_PER_EXTENT 8 /* It can be ~(uint32) 0 */
-#define SIMPLEFS_MAX_FILESIZE                                      \
-    ((uint64_t) SIMPLEFS_MAX_BLOCKS_PER_EXTENT *SIMPLEFS_BLOCK_SIZE \
-        *SIMPLEFS_MAX_EXTENTS)
+#define SIMPLEFS_MAX_FILESIZE                                          \
+    ((uint64_t) SIMPLEFS_MAX_BLOCKS_PER_EXTENT * SIMPLEFS_BLOCK_SIZE * \
+     SIMPLEFS_MAX_EXTENTS)
 
 #define SIMPLEFS_FILENAME_LEN 255
 
 #define SIMPLEFS_FILES_PER_BLOCK \
     (SIMPLEFS_BLOCK_SIZE / sizeof(struct simplefs_file))
 #define SIMPLEFS_FILES_PER_EXT \
-    (SIMPLEFS_FILES_PER_BLOCK *SIMPLEFS_MAX_BLOCKS_PER_EXTENT)
+    (SIMPLEFS_FILES_PER_BLOCK * SIMPLEFS_MAX_BLOCKS_PER_EXTENT)
 
-#define SIMPLEFS_MAX_SUBFILES \
-    (SIMPLEFS_FILES_PER_EXT *SIMPLEFS_MAX_EXTENTS)
+#define SIMPLEFS_MAX_SUBFILES (SIMPLEFS_FILES_PER_EXT * SIMPLEFS_MAX_EXTENTS)
 
 #include <linux/version.h>
 
-#define USER_NS_REQUIRED() LINUX_VERSION_CODE >= KERNEL_VERSION(5,12,0)
-#define MNT_IDMAP_REQUIRED() LINUX_VERSION_CODE >= KERNEL_VERSION(6,3,0)
+#define USER_NS_REQUIRED() LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
+#define MNT_IDMAP_REQUIRED() LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
 
-/*
- * simplefs partition layout
+/* simplefs partition layout
  * +---------------+
  * |  superblock   |  1 block
  * +---------------+
@@ -55,8 +53,8 @@ struct simplefs_inode {
     uint32_t i_mtime;  /* Modification time */
     uint32_t i_blocks; /* Block count */
     uint32_t i_nlink;  /* Hard links count */
-    uint32_t ei_block;  /* Block with list of extents for this file */
-    char i_data[32]; /* store symlink content */
+    uint32_t ei_block; /* Block with list of extents for this file */
+    char i_data[32];   /* store symlink content */
 };
 
 #define SIMPLEFS_INODES_PER_BLOCK \
@@ -82,9 +80,8 @@ struct simplefs_sb_info {
 };
 
 #ifdef __KERNEL__
-
 struct simplefs_inode_info {
-    uint32_t ei_block;  /* Block with list of extents for this file */
+    uint32_t ei_block; /* Block with list of extents for this file */
     char i_data[32];
     struct inode vfs_inode;
 };
@@ -130,7 +127,6 @@ extern uint32_t simplefs_ext_search(struct simplefs_file_ei_block *index,
 #define SIMPLEFS_SB(sb) (sb->s_fs_info)
 #define SIMPLEFS_INODE(inode) \
     (container_of(inode, struct simplefs_inode_info, vfs_inode))
-
 #endif /* __KERNEL__ */
 
 #endif /* SIMPLEFS_H */
