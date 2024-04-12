@@ -180,7 +180,7 @@ static struct inode *simplefs_new_inode(struct inode *dir, mode_t mode)
     uint32_t ino, bno;
     int ret;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
     struct timespec64 cur_time;
 #endif
 
@@ -312,7 +312,7 @@ static int simplefs_create(struct inode *dir,
     char *fblock;
     struct buffer_head *bh, *bh2;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
     struct timespec64 cur_time;
 #endif
 
@@ -520,7 +520,7 @@ static int simplefs_unlink(struct inode *dir, struct dentry *dentry)
     struct inode *inode = d_inode(dentry);
     struct buffer_head *bh = NULL, *bh2 = NULL;
     struct simplefs_file_ei_block *file_block = NULL;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
     struct timespec64 cur_time;
 #endif
     int ei = 0, bi = 0;
@@ -652,7 +652,7 @@ static int simplefs_rename(struct inode *old_dir,
     struct simplefs_file_ei_block *eblock_new = NULL;
     struct simplefs_dir_block *dblock = NULL;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
     struct timespec64 cur_time;
 #endif
 
