@@ -5,12 +5,13 @@
 #include "simplefs.h"
 
 /* Compare function for sort */
-int cmp(const void *a, const void *b)
+static int cmp(const void *a, const void *b)
 {
     struct simplefs_extent *extentA = (struct simplefs_extent *)a;
     struct simplefs_extent *extentB = (struct simplefs_extent *)b;
     return extentA->ee_block - extentB->ee_block;
 }
+
 
 /* Binary Search for the extent containing the target block.
  * Returns the first unused file index if not found.
