@@ -123,7 +123,7 @@ extern const struct address_space_operations simplefs_aops;
 extern uint32_t simplefs_ext_search(struct simplefs_file_ei_block *index,
                                     uint32_t iblock);
 
-/* Getters for superbock and inode */
+/* Getters for superblock and inode */
 #define SIMPLEFS_SB(sb) (sb->s_fs_info)
 #define SIMPLEFS_INODE(inode) \
     (container_of(inode, struct simplefs_inode_info, vfs_inode))
