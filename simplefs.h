@@ -108,11 +108,18 @@ struct simplefs_dir_block {
 
 /* superblock functions */
 int simplefs_fill_super(struct super_block *sb, void *data, int silent);
+void simplefs_kill_sb(struct super_block *sb);
 
 /* inode functions */
 int simplefs_init_inode_cache(void);
 void simplefs_destroy_inode_cache(void);
 struct inode *simplefs_iget(struct super_block *sb, unsigned long ino);
+
+/* dentry function */
+struct dentry *simplefs_mount(struct file_system_type *fs_type,
+                              int flags,
+                              const char *dev_name,
+                              void *data);
 
 /* file functions */
 extern const struct file_operations simplefs_file_ops;
