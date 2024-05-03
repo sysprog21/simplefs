@@ -96,10 +96,19 @@ static int simplefs_readpage(struct file *file, struct page *page)
 /* Called by the page cache to write a dirty page to the physical disk (when
  * sync is called or when memory is needed).
  */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
+static int simplefs_writepage(struct page *page, struct writeback_control *wbc)
+{
+    struct folio *folio = page_folio(page);
+    return __block_write_full_folio(page->mapping->host, folio,
+                                    simplefs_file_get_block, wbc);
+}
+#else
 static int simplefs_writepage(struct page *page, struct writeback_control *wbc)
 {
     return block_write_full_page(page, simplefs_file_get_block, wbc);
 }
+#endif
 
 /* Called by the VFS when a write() syscall is made on a file, before writing
  * the data into the page cache. This function checks if the write operation
@@ -183,7 +192,11 @@ static int simplefs_write_end(struct file *file,
     /* Update inode metadata */
     inode->i_blocks = inode->i_size / SIMPLEFS_BLOCK_SIZE + 2;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
+    cur_time = current_time(inode);
+    inode_set_mtime_to_ts(inode, cur_time);
+    inode_set_ctime_to_ts(inode, cur_time);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
     cur_time = current_time(inode);
     inode->i_mtime = cur_time;
     inode_set_ctime_to_ts(inode, cur_time);
