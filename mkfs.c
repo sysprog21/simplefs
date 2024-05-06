@@ -270,9 +270,9 @@ int main(int argc, char **argv)
         stat_buf.st_size = blk_size;
     }
 
-    /* Check if image is large enough */
+    /* Verify if the file system image has sufficient size. */
     long int min_size = 100 * SIMPLEFS_BLOCK_SIZE;
-    if (stat_buf.st_size <= min_size) {
+    if (stat_buf.st_size < min_size) {
         fprintf(stderr, "File is not large enough (size=%ld, min size=%ld)\n",
                 stat_buf.st_size, min_size);
         ret = EXIT_FAILURE;
