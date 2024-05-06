@@ -8,7 +8,11 @@
 #include <linux/statfs.h>
 
 #include "simplefs.h"
-
+struct dentry *simplefs_mount(struct file_system_type *fs_type,
+                              int flags,
+                              const char *dev_name,
+                              void *data);
+void simplefs_kill_sb(struct super_block *sb);
 static struct kmem_cache *simplefs_inode_cache;
 
 int simplefs_init_inode_cache(void)
@@ -78,8 +82,13 @@ static int simplefs_write_inode(struct inode *inode,
     disk_inode->i_ctime = inode->i_ctime.tv_sec;
 #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
+    disk_inode->i_atime = inode_get_atime_sec(inode);
+    disk_inode->i_atime = inode_get_mtime_sec(inode);
+#else
     disk_inode->i_atime = inode->i_atime.tv_sec;
     disk_inode->i_mtime = inode->i_mtime.tv_sec;
+#endif
     disk_inode->i_blocks = inode->i_blocks;
     disk_inode->i_nlink = inode->i_nlink;
     disk_inode->ei_block = ci->ei_block;

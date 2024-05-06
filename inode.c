@@ -63,10 +63,16 @@ struct inode *simplefs_iget(struct super_block *sb, unsigned long ino)
     inode->i_ctime.tv_nsec = 0;
 #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
+    inode_set_atime(inode, (time64_t) le32_to_cpu(cinode->i_atime), 0);
+    inode_set_mtime(inode, (time64_t) le32_to_cpu(cinode->i_mtime), 0);
+#else
     inode->i_atime.tv_sec = (time64_t) le32_to_cpu(cinode->i_atime);
     inode->i_atime.tv_nsec = 0;
     inode->i_mtime.tv_sec = (time64_t) le32_to_cpu(cinode->i_mtime);
     inode->i_mtime.tv_nsec = 0;
+#endif
+
     inode->i_blocks = le32_to_cpu(cinode->i_blocks);
     set_nlink(inode, le32_to_cpu(cinode->i_nlink));
 
@@ -161,7 +167,12 @@ search_end:
     brelse(bh);
 
     /* Update directory access time */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
+    inode_set_atime_to_ts(dir, current_time(dir));
+#else
     dir->i_atime = current_time(dir);
+#endif
+
     mark_inode_dirty(dir);
 
     /* Fill the dentry with the inode */
@@ -219,7 +230,9 @@ static struct inode *simplefs_new_inode(struct inode *dir, mode_t mode)
 #endif
         set_nlink(inode, 1);
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
+        simple_inode_init_ts(inode);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
         cur_time = current_time(inode);
         inode->i_atime = inode->i_mtime = cur_time;
         inode_set_ctime_to_ts(inode, cur_time);
@@ -261,7 +274,9 @@ static struct inode *simplefs_new_inode(struct inode *dir, mode_t mode)
         set_nlink(inode, 1);
     }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
+    simple_inode_init_ts(inode);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
     cur_time = current_time(inode);
     inode->i_atime = inode->i_mtime = cur_time;
     inode_set_ctime_to_ts(inode, cur_time);
@@ -395,7 +410,9 @@ static int simplefs_create(struct inode *dir,
     /* Update stats and mark dir and new inode dirty */
     mark_inode_dirty(inode);
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
+    simple_inode_init_ts(dir);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
     cur_time = current_time(dir);
     dir->i_mtime = dir->i_atime = cur_time;
     inode_set_ctime_to_ts(dir, cur_time);
@@ -537,7 +554,9 @@ static int simplefs_unlink(struct inode *dir, struct dentry *dentry)
         goto clean_inode;
 
         /* Update inode stats */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
+    simple_inode_init_ts(dir);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
     cur_time = current_time(dir);
     dir->i_mtime = dir->i_atime = cur_time;
     inode_set_ctime_to_ts(dir, cur_time);
@@ -606,7 +625,11 @@ clean_inode:
     i_gid_write(inode, 0);
     inode->i_mode = 0;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
+    inode_set_mtime(inode, 0, 0);
+    inode_set_atime(inode, 0, 0);
+    inode_set_ctime(inode, 0, 0);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
     inode->i_mtime.tv_sec = inode->i_atime.tv_sec = 0;
     inode_set_ctime(inode, 0, 0);
 #else
@@ -750,7 +773,9 @@ static int simplefs_rename(struct inode *old_dir,
     brelse(bh2);
 
     /* Update new parent inode metadata */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
+    simple_inode_init_ts(new_dir);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
     cur_time = current_time(new_dir);
     new_dir->i_atime = new_dir->i_mtime = cur_time;
     inode_set_ctime_to_ts(new_dir, cur_time);
@@ -769,7 +794,9 @@ static int simplefs_rename(struct inode *old_dir,
         goto release_new;
 
         /* Update old parent inode metadata */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
+    simple_inode_init_ts(old_dir);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
     cur_time = current_time(old_dir);
     old_dir->i_atime = old_dir->i_mtime = cur_time;
     inode_set_ctime_to_ts(old_dir, cur_time);
