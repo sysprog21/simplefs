@@ -15,14 +15,14 @@ struct superblock {
     char padding[4064]; /* Padding to match block size */
 };
 
-/* Returns ceil(a/b) */
-static inline uint32_t idiv_ceil(uint32_t a, uint32_t b)
-{
-    uint32_t ret = a / b;
-    if (a % b)
-        return ret + 1;
-    return ret;
-}
+/**
+ * DIV_ROUND_UP - round up a division
+ * @n: dividend
+ * @d: divisor
+ *
+ * Return the result of n / d, rounded up to the nearest integer.
+ */
+#define DIV_ROUND_UP(n, d) (((n) + (d) -1) / (d))
 
 static struct superblock *write_superblock(int fd, struct stat *fstats)
 {
@@ -35,9 +35,10 @@ static struct superblock *write_superblock(int fd, struct stat *fstats)
     uint32_t mod = nr_inodes % SIMPLEFS_INODES_PER_BLOCK;
     if (mod)
         nr_inodes += SIMPLEFS_INODES_PER_BLOCK - mod;
-    uint32_t nr_istore_blocks = idiv_ceil(nr_inodes, SIMPLEFS_INODES_PER_BLOCK);
-    uint32_t nr_ifree_blocks = idiv_ceil(nr_inodes, SIMPLEFS_BLOCK_SIZE * 8);
-    uint32_t nr_bfree_blocks = idiv_ceil(nr_blocks, SIMPLEFS_BLOCK_SIZE * 8);
+    uint32_t nr_istore_blocks =
+        DIV_ROUND_UP(nr_inodes, SIMPLEFS_INODES_PER_BLOCK);
+    uint32_t nr_ifree_blocks = DIV_ROUND_UP(nr_inodes, SIMPLEFS_BLOCK_SIZE * 8);
+    uint32_t nr_bfree_blocks = DIV_ROUND_UP(nr_blocks, SIMPLEFS_BLOCK_SIZE * 8);
     uint32_t nr_data_blocks =
         nr_blocks - nr_istore_blocks - nr_ifree_blocks - nr_bfree_blocks;
 
