@@ -78,22 +78,23 @@ static struct superblock *write_superblock(int fd, struct stat *fstats)
 
 static int write_inode_store(int fd, struct superblock *sb)
 {
-    /* Allocate a zeroed block for inode store */
+    /* Allocate a block of zeroed-out memory space for the inode storage. */
     char *block = malloc(SIMPLEFS_BLOCK_SIZE);
     if (!block)
         return -1;
 
     memset(block, 0, SIMPLEFS_BLOCK_SIZE);
 
-    /* Root inode (inode 0) */
+    /* Root inode (inode 1) */
     struct simplefs_inode *inode = (struct simplefs_inode *) block;
     uint32_t first_data_block = 1 + le32toh(sb->info.nr_bfree_blocks) +
                                 le32toh(sb->info.nr_ifree_blocks) +
                                 le32toh(sb->info.nr_istore_blocks);
 
-    /* Use inode 1 for root.
-     * If system use glibc, readdir will skip inode 0, and vfs also avoid
-     * using inode 0
+    /* Designate inode 1 as the root inode.
+     * When the system uses the glibc, the readdir function will skip over
+     * inode 0. Additionally, the VFS layer avoids using inode 0 to prevent
+     * potential issues.
      */
     inode += 1;
     inode->i_mode = htole32(S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH | S_IWUSR |
@@ -112,7 +113,7 @@ static int write_inode_store(int fd, struct superblock *sb)
         goto end;
     }
 
-    /* Reset inode store blocks to zero */
+    /* Clear all memory blocks allocated for inode storage. */
     memset(block, 0, SIMPLEFS_BLOCK_SIZE);
     uint32_t i;
     for (i = 1; i < sb->info.nr_istore_blocks; i++) {
@@ -145,7 +146,7 @@ static int write_ifree_blocks(int fd, struct superblock *sb)
     /* Set all bits to 1 */
     memset(ifree, 0xff, SIMPLEFS_BLOCK_SIZE);
 
-    /* First ifree block, containing first used inode */
+    /* The initial ifree block holds the first inode marked as in-use. */
     ifree[0] = htole64(0xfffffffffffffffc);
     int ret = write(fd, ifree, SIMPLEFS_BLOCK_SIZE);
     if (ret != SIMPLEFS_BLOCK_SIZE) {
@@ -184,8 +185,9 @@ static int write_bfree_blocks(int fd, struct superblock *sb)
         return -1;
     uint64_t *bfree = (uint64_t *) block;
 
-    /* First blocks (incl. sb + istore + ifree + bfree + 1 used block)
-     * we suppose it won't go further than the first block
+    /* The first blocks refer to the superblock (metadata about the fs), inode
+     * store (where inode data is stored), ifree (list of free inodes), bfree
+     * (list of free data blocks), and one data block marked as used.
      */
     memset(bfree, 0xff, SIMPLEFS_BLOCK_SIZE);
     uint32_t i = 0;
