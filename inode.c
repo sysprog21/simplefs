@@ -96,7 +96,7 @@ failed:
     return ERR_PTR(ret);
 }
 
-/* Searches for a dentry in dir.
+/* Search for a dentry in dir.
  * Fills dentry with NULL if not found in dir, or with the corresponding inode
  * if found.
  * Returns NULL on success, indicating the dentry was successfully filled or

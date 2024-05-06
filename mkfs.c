@@ -155,7 +155,9 @@ static int write_ifree_blocks(int fd, struct superblock *sb)
         goto end;
     }
 
-    /* All ifree blocks except the one containing 2 first inodes */
+    /* All free blocks in the inode bitmap except the one containing the first
+     * two inodes.
+     */
     ifree[0] = 0xffffffffffffffff;
     uint32_t i;
     for (i = 1; i < le32toh(sb->info.nr_ifree_blocks); i++) {
