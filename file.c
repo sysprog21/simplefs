@@ -175,7 +175,7 @@ static int simplefs_write_end(struct file *file,
     struct inode *inode = file->f_inode;
     struct simplefs_inode_info *ci = SIMPLEFS_INODE(inode);
     struct super_block *sb = inode->i_sb;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 5, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
     struct timespec64 cur_time;
 #endif
     uint32_t nr_blocks_old;
