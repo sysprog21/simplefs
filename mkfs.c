@@ -11,9 +11,13 @@
 #include "simplefs.h"
 
 struct superblock {
-    struct simplefs_sb_info info;
-    char padding[4064]; /* Padding to match block size */
+    union {
+        struct simplefs_sb_info info;
+        char padding[SIMPLEFS_BLOCK_SIZE]; /* Padding to match block size */
+    };
 };
+
+_Static_assert(sizeof(struct superblock) == SIMPLEFS_BLOCK_SIZE);
 
 /**
  * DIV_ROUND_UP - round up a division
