@@ -20,7 +20,6 @@ static int simplefs_file_get_block(struct inode *inode,
                                    int create)
 {
     struct super_block *sb = inode->i_sb;
-    struct simplefs_sb_info *sbi = SIMPLEFS_SB(sb);
     struct simplefs_inode_info *ci = SIMPLEFS_INODE(inode);
     struct simplefs_file_ei_block *index;
     struct buffer_head *bh_index;
@@ -52,7 +51,7 @@ static int simplefs_file_get_block(struct inode *inode,
             ret = 0;
             goto brelse_index;
         }
-        bno = get_free_blocks(sbi, 8);
+        bno = get_free_blocks(sb, 8);
         if (!bno) {
             ret = -ENOSPC;
             goto brelse_index;

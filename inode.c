@@ -248,7 +248,7 @@ static struct inode *simplefs_new_inode(struct inode *dir, mode_t mode)
     ci = SIMPLEFS_INODE(inode);
 
     /* Get a free block for this new inode's index */
-    bno = get_free_blocks(sbi, 1);
+    bno = get_free_blocks(sb, 1);
     if (!bno) {
         ret = -ENOSPC;
         goto put_inode;
@@ -381,7 +381,7 @@ static int simplefs_create(struct inode *dir,
     fi = eblock->nr_files % SIMPLEFS_FILES_PER_BLOCK;
 
     if (!eblock->extents[ei].ee_start) {
-        bno = get_free_blocks(SIMPLEFS_SB(sb), 8);
+        bno = get_free_blocks(sb, 8);
         if (!bno) {
             ret = -ENOSPC;
             goto iput;
@@ -753,7 +753,7 @@ static int simplefs_rename(struct inode *old_dir,
     /* insert in new parent directory */
     /* Get new freeblocks for extent if needed*/
     if (new_pos < 0) {
-        bno = get_free_blocks(SIMPLEFS_SB(sb), 8);
+        bno = get_free_blocks(sb, 8);
         if (!bno) {
             ret = -ENOSPC;
             goto release_new;
@@ -909,7 +909,7 @@ static int simplefs_link(struct dentry *old_dentry,
     fi = eblock->nr_files % SIMPLEFS_FILES_PER_BLOCK;
 
     if (eblock->extents[ei].ee_start == 0) {
-        bno = get_free_blocks(SIMPLEFS_SB(sb), 8);
+        bno = get_free_blocks(sb, 8);
         if (!bno) {
             ret = -ENOSPC;
             goto end;
@@ -1002,7 +1002,7 @@ static int simplefs_symlink(struct inode *dir,
     fi = eblock->nr_files % SIMPLEFS_FILES_PER_BLOCK;
 
     if (eblock->extents[ei].ee_start == 0) {
-        bno = get_free_blocks(SIMPLEFS_SB(sb), 8);
+        bno = get_free_blocks(sb, 8);
         if (!bno) {
             ret = -ENOSPC;
             goto end;
