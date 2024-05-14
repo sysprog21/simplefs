@@ -190,7 +190,7 @@ static int simplefs_write_end(struct file *file,
     nr_blocks_old = inode->i_blocks;
 
     /* Update inode metadata */
-    inode->i_blocks = inode->i_size / SIMPLEFS_BLOCK_SIZE + 2;
+    inode->i_blocks = DIV_ROUND_UP(inode->i_size, SIMPLEFS_BLOCK_SIZE) + 1;
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
     cur_time = current_time(inode);
