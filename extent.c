@@ -38,10 +38,8 @@ uint32_t simplefs_ext_search(struct simplefs_file_ei_block *index,
         boundary = end + 1;
     }
 
-    if (boundary == 0) {
-        /* No used file index */
+    if (boundary == 0) /* No used file index */
         return boundary;
-    }
 
     /* try finding target block using binary search */
     start = 0;

@@ -8,6 +8,7 @@
 #include <linux/statfs.h>
 
 #include "simplefs.h"
+
 struct dentry *simplefs_mount(struct file_system_type *fs_type,
                               int flags,
                               const char *dev_name,
@@ -209,13 +210,13 @@ int simplefs_fill_super(struct super_block *sb, void *data, int silent)
     struct inode *root_inode = NULL;
     int ret = 0, i;
 
-    /* Init sb */
+    /* Initialize the superblock */
     sb->s_magic = SIMPLEFS_MAGIC;
     sb_set_blocksize(sb, SIMPLEFS_BLOCK_SIZE);
     sb->s_maxbytes = SIMPLEFS_MAX_FILESIZE;
     sb->s_op = &simplefs_super_ops;
 
-    /* Read sb from disk */
+    /* Read the superblock from disk */
     bh = sb_bread(sb, SIMPLEFS_SB_BLOCK_NR);
     if (!bh)
         return -EIO;
@@ -229,7 +230,7 @@ int simplefs_fill_super(struct super_block *sb, void *data, int silent)
         goto release;
     }
 
-    /* Alloc sb_info */
+    /* Allocate sb_info */
     sbi = kzalloc(sizeof(struct simplefs_sb_info), GFP_KERNEL);
     if (!sbi) {
         ret = -ENOMEM;
@@ -247,7 +248,7 @@ int simplefs_fill_super(struct super_block *sb, void *data, int silent)
 
     brelse(bh);
 
-    /* Alloc and copy ifree_bitmap */
+    /* Allocate and copy ifree_bitmap */
     sbi->ifree_bitmap =
         kzalloc(sbi->nr_ifree_blocks * SIMPLEFS_BLOCK_SIZE, GFP_KERNEL);
     if (!sbi->ifree_bitmap) {
@@ -270,7 +271,7 @@ int simplefs_fill_super(struct super_block *sb, void *data, int silent)
         brelse(bh);
     }
 
-    /* Alloc and copy bfree_bitmap */
+    /* Allocate and copy bfree_bitmap */
     sbi->bfree_bitmap =
         kzalloc(sbi->nr_bfree_blocks * SIMPLEFS_BLOCK_SIZE, GFP_KERNEL);
     if (!sbi->bfree_bitmap) {
