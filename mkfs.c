@@ -235,7 +235,20 @@ end:
 
 static int write_data_blocks(int fd, struct superblock *sb)
 {
-    /* FIXME: unimplemented */
+    char *buffer = calloc(1, SIMPLEFS_BLOCK_SIZE);
+    if (!buffer) {
+        perror("Failed to allocate memory");
+        return -1;
+    }
+
+    ssize_t ret = write(fd, buffer, SIMPLEFS_BLOCK_SIZE);
+    if (ret != SIMPLEFS_BLOCK_SIZE) {
+        perror("Failed to write data block");
+        free(buffer);
+        return -1;
+    }
+
+    free(buffer);
     return 0;
 }
 
@@ -315,7 +328,7 @@ int main(int argc, char **argv)
         goto free_sb;
     }
 
-    /* Write data blocks */
+    /* clear a root index block */
     ret = write_data_blocks(fd, sb);
     if (ret) {
         perror("write_data_blocks():");
