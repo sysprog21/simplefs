@@ -301,9 +301,9 @@ int simplefs_fill_super(struct super_block *sb, void *data, int silent)
         goto free_bfree;
     }
 
-#if MNT_IDMAP_REQUIRED()
+#if SIMPLEFS_AT_LEAST(6, 3, 0)
     inode_init_owner(&nop_mnt_idmap, root_inode, NULL, root_inode->i_mode);
-#elif USER_NS_REQUIRED()
+#elif SIMPLEFS_AT_LEAST(5, 12, 0)
     inode_init_owner(&init_user_ns, root_inode, NULL, root_inode->i_mode);
 #else
     inode_init_owner(root_inode, NULL, root_inode->i_mode);

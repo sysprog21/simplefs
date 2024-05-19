@@ -23,11 +23,6 @@
 
 #define SIMPLEFS_MAX_SUBFILES (SIMPLEFS_FILES_PER_EXT * SIMPLEFS_MAX_EXTENTS)
 
-#include <linux/version.h>
-
-#define USER_NS_REQUIRED() LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-#define MNT_IDMAP_REQUIRED() LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
-
 /* simplefs partition layout
  * +---------------+
  * |  superblock   |  1 block
@@ -80,6 +75,11 @@ struct simplefs_sb_info {
 };
 
 #ifdef __KERNEL__
+#include <linux/version.h>
+/* compatibility macros */
+#define SIMPLEFS_AT_LEAST(major, minor, rev) \
+    LINUX_VERSION_CODE >= KERNEL_VERSION(major, minor, rev)
+
 struct simplefs_inode_info {
     uint32_t ei_block; /* Block with list of extents for this file */
     char i_data[32];
