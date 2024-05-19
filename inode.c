@@ -749,8 +749,8 @@ static int simplefs_rename(struct inode *old_dir,
                     break;
                 }
             }
-            if (new_pos < 0)
-                brelse(bh2);
+
+            brelse(bh2);
         }
     }
 
