@@ -43,18 +43,22 @@ static int __init simplefs_init(void)
 {
     int ret = simplefs_init_inode_cache();
     if (ret) {
-        pr_err("inode cache creation failed\n");
-        goto end;
+        pr_err("Failed to create inode cache\n");
+        goto err;
     }
 
     ret = register_filesystem(&simplefs_file_system_type);
     if (ret) {
-        pr_err("register_filesystem() failed\n");
-        goto end;
+        pr_err("Failed to register file system\n");
+        goto err_inode;
     }
 
     pr_info("module loaded\n");
-end:
+    return 0;
+
+err_inode:
+    simplefs_destroy_inode_cache();
+err:
     return ret;
 }
 
@@ -62,7 +66,7 @@ static void __exit simplefs_exit(void)
 {
     int ret = unregister_filesystem(&simplefs_file_system_type);
     if (ret)
-        pr_err("unregister_filesystem() failed\n");
+        pr_err("Failed to unregister file system\n");
 
     simplefs_destroy_inode_cache();
 
