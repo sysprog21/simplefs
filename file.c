@@ -80,7 +80,7 @@ brelse_index:
 /* Called by the page cache to read a page from the physical disk and map it
  * into memory.
  */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
+#if SIMPLEFS_AT_LEAST(5, 19, 0)
 static void simplefs_readahead(struct readahead_control *rac)
 {
     mpage_readahead(rac, simplefs_file_get_block);
@@ -95,7 +95,7 @@ static int simplefs_readpage(struct file *file, struct page *page)
 /* Called by the page cache to write a dirty page to the physical disk (when
  * sync is called or when memory is needed).
  */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
+#if SIMPLEFS_AT_LEAST(6, 8, 0)
 static int simplefs_writepage(struct page *page, struct writeback_control *wbc)
 {
     struct folio *folio = page_folio(page);
@@ -113,7 +113,7 @@ static int simplefs_writepage(struct page *page, struct writeback_control *wbc)
  * the data into the page cache. This function checks if the write operation
  * can complete and allocates the necessary blocks through block_write_begin().
  */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
+#if SIMPLEFS_AT_LEAST(5, 19, 0)
 static int simplefs_write_begin(struct file *file,
                                 struct address_space *mapping,
                                 loff_t pos,
@@ -147,7 +147,7 @@ static int simplefs_write_begin(struct file *file,
         return -ENOSPC;
 
         /* prepare the write */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
+#if SIMPLEFS_AT_LEAST(5, 19, 0)
     err = block_write_begin(mapping, pos, len, pagep, simplefs_file_get_block);
 #else
     err = block_write_begin(mapping, pos, len, flags, pagep,
@@ -174,7 +174,7 @@ static int simplefs_write_end(struct file *file,
     struct inode *inode = file->f_inode;
     struct simplefs_inode_info *ci = SIMPLEFS_INODE(inode);
     struct super_block *sb = inode->i_sb;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+#if SIMPLEFS_AT_LEAST(6, 6, 0)
     struct timespec64 cur_time;
 #endif
     uint32_t nr_blocks_old;
@@ -191,11 +191,11 @@ static int simplefs_write_end(struct file *file,
     /* Update inode metadata */
     inode->i_blocks = DIV_ROUND_UP(inode->i_size, SIMPLEFS_BLOCK_SIZE) + 1;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
+#if SIMPLEFS_AT_LEAST(6, 7, 0)
     cur_time = current_time(inode);
     inode_set_mtime_to_ts(inode, cur_time);
     inode_set_ctime_to_ts(inode, cur_time);
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+#elif SIMPLEFS_AT_LEAST(6, 6, 0)
     cur_time = current_time(inode);
     inode->i_mtime = cur_time;
     inode_set_ctime_to_ts(inode, cur_time);
@@ -246,7 +246,7 @@ end:
 }
 
 const struct address_space_operations simplefs_aops = {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
+#if SIMPLEFS_AT_LEAST(5, 19, 0)
     .readahead = simplefs_readahead,
 #else
     .readpage = simplefs_readpage,

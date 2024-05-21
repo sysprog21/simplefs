@@ -79,6 +79,8 @@ struct simplefs_sb_info {
 /* compatibility macros */
 #define SIMPLEFS_AT_LEAST(major, minor, rev) \
     LINUX_VERSION_CODE >= KERNEL_VERSION(major, minor, rev)
+#define SIMPLEFS_LESS_EQUAL(major, minor, rev) \
+    LINUX_VERSION_CODE <= KERNEL_VERSION(major, minor, rev)
 
 /* A 'container' structure that keeps the VFS inode and additional on-disk
  * data.

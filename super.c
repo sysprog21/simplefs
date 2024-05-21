@@ -80,14 +80,14 @@ static int simplefs_write_inode(struct inode *inode,
     disk_inode->i_gid = i_gid_read(inode);
     disk_inode->i_size = inode->i_size;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+#if SIMPLEFS_AT_LEAST(6, 6, 0)
     struct timespec64 ctime = inode_get_ctime(inode);
     disk_inode->i_ctime = ctime.tv_sec;
 #else
     disk_inode->i_ctime = inode->i_ctime.tv_sec;
 #endif
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 7, 0)
+#if SIMPLEFS_AT_LEAST(6, 7, 0)
     disk_inode->i_atime = inode_get_atime_sec(inode);
     disk_inode->i_atime = inode_get_mtime_sec(inode);
 #else
