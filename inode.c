@@ -11,7 +11,15 @@
 static const struct inode_operations simplefs_inode_ops;
 static const struct inode_operations symlink_inode_ops;
 
-/* Get inode ino from disk */
+/* Either return the inode that corresponds to a given inode number (ino), if
+ * it is already in the cache, or create a new inode object if it is not in the
+ * cache.
+ *
+ * Note that this function is very similar to simplefs_new_inode, except that
+ * the requested inode is supposed to be allocated on-disk already. So do not
+ * use this to create a completely new inode that has not been allocated on
+ * disk.
+ */
 struct inode *simplefs_iget(struct super_block *sb, unsigned long ino)
 {
     struct inode *inode = NULL;
@@ -181,7 +189,17 @@ search_end:
     return NULL;
 }
 
-/* Create a new inode in dir */
+/* Find and construct a new inode.
+ *
+ * @dir: the inode of the parent directory where the new inode is supposed to
+ *       be attached to.
+ * @mode: the mode information of the new inode
+ *
+ * This is a helper function for the inode operation "create" (implemented in
+ * simplefs_create()). It takes care of reserving an inode block on disk (by
+ * modifying the inode bitmap), creating a VFS inode object (in memory), and
+ * attaching filesystem-specific information to that VFS inode.
+ */
 static struct inode *simplefs_new_inode(struct inode *dir, mode_t mode)
 {
     struct inode *inode;

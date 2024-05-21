@@ -16,6 +16,9 @@ struct dentry *simplefs_mount(struct file_system_type *fs_type,
 void simplefs_kill_sb(struct super_block *sb);
 static struct kmem_cache *simplefs_inode_cache;
 
+/* Needed to initiate the inode cache, to allow us to attach
+ * filesystem-specific inode information.
+ */
 int simplefs_init_inode_cache(void)
 {
     simplefs_inode_cache = kmem_cache_create_usercopy(
@@ -26,6 +29,7 @@ int simplefs_init_inode_cache(void)
     return 0;
 }
 
+/* De-allocate the inode cache */
 void simplefs_destroy_inode_cache(void)
 {
     kmem_cache_destroy(simplefs_inode_cache);

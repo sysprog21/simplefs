@@ -80,6 +80,9 @@ struct simplefs_sb_info {
 #define SIMPLEFS_AT_LEAST(major, minor, rev) \
     LINUX_VERSION_CODE >= KERNEL_VERSION(major, minor, rev)
 
+/* A 'container' structure that keeps the VFS inode and additional on-disk
+ * data.
+ */
 struct simplefs_inode_info {
     uint32_t ei_block; /* Block with list of extents for this file */
     char i_data[32];
@@ -132,6 +135,7 @@ extern uint32_t simplefs_ext_search(struct simplefs_file_ei_block *index,
 
 /* Getters for superblock and inode */
 #define SIMPLEFS_SB(sb) (sb->s_fs_info)
+/* Extract a simplefs_inode_info object from a VFS inode */
 #define SIMPLEFS_INODE(inode) \
     (container_of(inode, struct simplefs_inode_info, vfs_inode))
 #endif /* __KERNEL__ */
