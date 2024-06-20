@@ -2,6 +2,7 @@
 
 #include <linux/buffer_head.h>
 #include <linux/fs.h>
+#include <linux/jbd2.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/mpage.h>
@@ -34,6 +35,20 @@ static int simplefs_file_get_block(struct inode *inode,
     bh_index = sb_bread(sb, ci->ei_block);
     if (!bh_index)
         return -EIO;
+
+    handle_t *handle = journal_current_handle();
+    if (!handle) {
+        brelse(bh_index);
+        return -EIO;
+    }
+
+    ret = jbd2_journal_get_write_access(handle, bh_index);
+    if (ret) {
+        brelse(bh_index);
+        pr_info("Can't get write access for bh\n");
+        return ret;
+    }
+
     index = (struct simplefs_file_ei_block *) bh_index->b_data;
 
     extent = simplefs_ext_search(index, iblock);
@@ -63,6 +78,13 @@ static int simplefs_file_get_block(struct inode *inode,
             extent ? index->extents[extent - 1].ee_block +
                          index->extents[extent - 1].ee_len
                    : 0;
+        ret = jbd2_journal_dirty_metadata(handle, bh_index);
+        if (ret) {
+            brelse(bh_index);
+            return ret;
+        }
+        mark_buffer_dirty_inode(bh_index, inode);
+
     } else {
         bno = index->extents[extent].ee_start + iblock -
               index->extents[extent].ee_block;
@@ -133,6 +155,7 @@ static int simplefs_write_begin(struct file *file,
     struct simplefs_sb_info *sbi = SIMPLEFS_SB(file->f_inode->i_sb);
     int err;
     uint32_t nr_allocs = 0;
+    handle_t *handle;
 
     /* Check if the write can be completed (enough space?) */
     if (pos + len > SIMPLEFS_MAX_FILESIZE)
@@ -145,6 +168,16 @@ static int simplefs_write_begin(struct file *file,
         nr_allocs = 0;
     if (nr_allocs > sbi->nr_free_blocks)
         return -ENOSPC;
+
+    // handle journal start here
+    /*
+     * Fix me: the metadata type we should store into journal
+     * In the current situation, we only record the location of the extent
+     * and write that metadata to the journal.
+     */
+    handle = jbd2_journal_start(sbi->journal, 1);
+    if (IS_ERR(handle))
+        return PTR_ERR(handle);
 
         /* prepare the write */
 #if SIMPLEFS_AT_LEAST(5, 19, 0)
@@ -174,6 +207,16 @@ static int simplefs_write_end(struct file *file,
     struct inode *inode = file->f_inode;
     struct simplefs_inode_info *ci = SIMPLEFS_INODE(inode);
     struct super_block *sb = inode->i_sb;
+
+    handle_t *handle;
+
+    // handle journal start here
+    handle = journal_current_handle();
+    if (!handle) {
+        pr_err("can't get journal handle\n");
+        return -EIO;
+    }
+
 #if SIMPLEFS_AT_LEAST(6, 6, 0)
     struct timespec64 cur_time;
 #endif
@@ -223,6 +266,14 @@ static int simplefs_write_end(struct file *file,
                    nr_blocks_old - inode->i_blocks);
             goto end;
         }
+
+        int retval = jbd2_journal_get_write_access(handle, bh_index);
+        if (WARN_ON(retval)) {
+            brelse(bh_index);
+            pr_info("cant get journal write access\n");
+            return retval;
+        }
+
         index = (struct simplefs_file_ei_block *) bh_index->b_data;
 
         first_ext = simplefs_ext_search(index, inode->i_blocks - 1);
@@ -238,9 +289,13 @@ static int simplefs_write_end(struct file *file,
                        index->extents[i].ee_len);
             memset(&index->extents[i], 0, sizeof(struct simplefs_extent));
         }
+        jbd2_journal_dirty_metadata(handle, bh_index);
         mark_buffer_dirty(bh_index);
         brelse(bh_index);
     }
+
+    jbd2_journal_stop(handle);
+
 end:
     return ret;
 }
