@@ -37,6 +37,9 @@
  * |      blocks   |  rest of the blocks
  * +---------------+
  */
+#ifdef __KERNEL__
+#include <linux/jbd2.h>
+#endif
 
 struct simplefs_inode {
     uint32_t i_mode;   /* File mode */
@@ -69,6 +72,8 @@ struct simplefs_sb_info {
     uint32_t nr_free_blocks; /* Number of free blocks */
 
 #ifdef __KERNEL__
+    journal_t *journal;
+    struct bdev_handle *s_journal_bdev_handle;
     unsigned long *ifree_bitmap; /* In-memory free inodes bitmap */
     unsigned long *bfree_bitmap; /* In-memory free blocks bitmap */
 #endif
