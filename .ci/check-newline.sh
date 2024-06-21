@@ -14,6 +14,6 @@ while IFS= read -rd '' f; do
             show=0
         fi
     fi
-done < <(git ls-files -z src tests/arch-test-target)
+done < <(git ls-files -z .)
 
 exit $ret
