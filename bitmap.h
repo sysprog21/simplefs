@@ -47,11 +47,12 @@ static inline uint32_t get_free_blocks(struct super_block *sb, uint32_t len)
 {
     struct simplefs_sb_info *sbi = SIMPLEFS_SB(sb);
     uint32_t ret = get_first_free_bits(sbi->bfree_bitmap, sbi->nr_blocks, len);
+    uint32_t i;
     if (!ret) /* No enough free blocks */
         return 0;
 
     sbi->nr_free_blocks -= len;
-    for (uint32_t i = 0; i < len; i++) {
+    for (i = 0; i < len; i++) {
         struct buffer_head *bh = sb_bread(sb, ret + i);
         if (!bh) {
             pr_err("get_free_blocks: sb_bread failed for block %d\n", ret + i);
@@ -60,6 +61,7 @@ static inline uint32_t get_free_blocks(struct super_block *sb, uint32_t len)
         }
         memset(bh->b_data, 0, SIMPLEFS_BLOCK_SIZE);
         mark_buffer_dirty(bh);
+        sync_dirty_buffer(bh); /* write the buffer to disk */
         brelse(bh);
     }
     return ret;
