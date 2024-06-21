@@ -73,7 +73,9 @@ struct simplefs_sb_info {
 
 #ifdef __KERNEL__
     journal_t *journal;
-    struct bdev_handle *s_journal_bdev_handle;
+    struct block_device *s_journal_bdev; /* v6.5 external journal device */
+    struct bdev_handle
+        *s_journal_bdev_handle;  /* v6.8 external journal device */
     unsigned long *ifree_bitmap; /* In-memory free inodes bitmap */
     unsigned long *bfree_bitmap; /* In-memory free blocks bitmap */
 #endif

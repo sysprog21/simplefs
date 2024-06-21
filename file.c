@@ -169,9 +169,9 @@ static int simplefs_write_begin(struct file *file,
     if (nr_allocs > sbi->nr_free_blocks)
         return -ENOSPC;
 
-    // handle journal start here
+    /* handle journal starting here */
     /*
-     * Fix me: the metadata type we should store into journal
+     * FIXME: the metadata type we should store into journal
      * In the current situation, we only record the location of the extent
      * and write that metadata to the journal.
      */
@@ -210,7 +210,7 @@ static int simplefs_write_end(struct file *file,
 
     handle_t *handle;
 
-    // handle journal start here
+    /* handle journal start here */
     handle = journal_current_handle();
     if (!handle) {
         pr_err("can't get journal handle\n");
