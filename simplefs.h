@@ -10,6 +10,8 @@
 #define SIMPLEFS_MAX_EXTENTS \
     ((SIMPLEFS_BLOCK_SIZE - sizeof(uint32_t)) / sizeof(struct simplefs_extent))
 #define SIMPLEFS_MAX_BLOCKS_PER_EXTENT 8 /* It can be ~(uint32) 0 */
+#define SIMPLEFS_MAX_SIZES_PER_EXTENT \
+    (SIMPLEFS_MAX_BLOCKS_PER_EXTENT * SIMPLEFS_BLOCK_SIZE)
 #define SIMPLEFS_MAX_FILESIZE                                          \
     ((uint64_t) SIMPLEFS_MAX_BLOCKS_PER_EXTENT * SIMPLEFS_BLOCK_SIZE * \
      SIMPLEFS_MAX_EXTENTS)
