@@ -59,9 +59,8 @@ uint32_t simplefs_ext_search(struct simplefs_file_ei_block *index,
         }
     }
 
-    /* return 'end' if it directs to valid block
-     * return 'boundary' if index is not found
-     * and eiblock has remaining space
+    /* Return 'end' if it directs to valid block.
+     * Return 'boundary' if index is not found and eiblock has remaining space
      */
     end_block = index->extents[end].ee_block;
     end_len = index->extents[end].ee_len;

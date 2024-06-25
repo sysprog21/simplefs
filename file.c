@@ -311,7 +311,6 @@ static ssize_t simplefs_read(struct file *file,
     struct simplefs_file_ei_block *ei_block =
         (struct simplefs_file_ei_block *) bh->b_data;
 
-
     if (pos + len > inode->i_size)
         len = inode->i_size - pos;
 
@@ -469,10 +468,10 @@ const struct address_space_operations simplefs_aops = {
 };
 
 const struct file_operations simplefs_file_ops = {
-    .llseek = generic_file_llseek,
     .owner = THIS_MODULE,
-    .fsync = generic_file_fsync,
     .open = simplefs_open,
     .read = simplefs_read,
     .write = simplefs_write,
+    .llseek = generic_file_llseek,
+    .fsync = generic_file_fsync,
 };

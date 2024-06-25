@@ -142,6 +142,7 @@ extern uint32_t simplefs_ext_search(struct simplefs_file_ei_block *index,
 /* Extract a simplefs_inode_info object from a VFS inode */
 #define SIMPLEFS_INODE(inode) \
     (container_of(inode, struct simplefs_inode_info, vfs_inode))
+
 #endif /* __KERNEL__ */
 
 #endif /* SIMPLEFS_H */
