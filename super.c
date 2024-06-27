@@ -33,6 +33,7 @@ int simplefs_init_inode_cache(void)
 void simplefs_destroy_inode_cache(void)
 {
     kmem_cache_destroy(simplefs_inode_cache);
+    rcu_barrier();
 }
 
 static struct inode *simplefs_alloc_inode(struct super_block *sb)
