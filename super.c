@@ -7,6 +7,11 @@
 #include <linux/slab.h>
 #include <linux/statfs.h>
 
+#include <linux/blkdev.h>
+#include <linux/jbd2.h>
+#include <linux/namei.h>
+#include <linux/parser.h>
+
 #include "simplefs.h"
 
 struct dentry *simplefs_mount(struct file_system_type *fs_type,
@@ -109,6 +114,47 @@ static int simplefs_write_inode(struct inode *inode,
 static void simplefs_put_super(struct super_block *sb)
 {
     struct simplefs_sb_info *sbi = SIMPLEFS_SB(sb);
+    int aborted = 0;
+    int err;
+
+    if (sbi->journal) {
+        aborted = is_journal_aborted(sbi->journal);
+        err = jbd2_journal_destroy(sbi->journal);
+        sbi->journal = NULL;
+        if ((err < 0) && !aborted) {
+            pr_err("Couldn't clean up the journal, error %d\n", -err);
+        }
+    }
+
+    sync_blockdev(sb->s_bdev);
+    invalidate_bdev(sb->s_bdev);
+
+#if SIMPLEFS_AT_LEAST(6, 7, 0)
+    if (sbi->s_journal_bdev_handle) {
+        sync_blockdev(sbi->s_journal_bdev_handle->bdev);
+        invalidate_bdev(sbi->s_journal_bdev_handle->bdev);
+    }
+#elif SIMPLEFS_AT_LEAST(6, 6, 0)
+    if (sbi->s_journal_bdev) {
+        sync_blockdev(sbi->s_journal_bdev);
+        invalidate_bdev(sbi->s_journal_bdev);
+    }
+#elif SIMPLEFS_AT_LEAST(6, 5, 0)
+    if (sbi->s_journal_bdev) {
+        sync_blockdev(sbi->s_journal_bdev);
+        invalidate_bdev(sbi->s_journal_bdev);
+        blkdev_put(sbi->s_journal_bdev, sb);
+        sbi->s_journal_bdev = NULL;
+    }
+#elif SIMPLEFS_AT_LEAST(5, 10, 0)
+    if (sbi->s_journal_bdev && sbi->s_journal_bdev != sb->s_bdev) {
+        sync_blockdev(sbi->s_journal_bdev);
+        invalidate_bdev(sbi->s_journal_bdev);
+        blkdev_put(sbi->s_journal_bdev, FMODE_READ | FMODE_WRITE | FMODE_EXCL);
+        sbi->s_journal_bdev = NULL;
+    }
+#endif
+
     if (sbi) {
         kfree(sbi->ifree_bitmap);
         kfree(sbi->bfree_bitmap);
@@ -192,6 +238,254 @@ static int simplefs_statfs(struct dentry *dentry, struct kstatfs *stat)
     stat->f_files = sbi->nr_inodes;
     stat->f_ffree = sbi->nr_free_inodes;
     stat->f_namelen = SIMPLEFS_FILENAME_LEN;
+
+    return 0;
+}
+
+/* Code related to the external journal device settings */
+
+static journal_t *simplefs_get_dev_journal(struct super_block *sb,
+                                           dev_t journal_dev)
+{
+    struct simplefs_sb_info *sbi = SIMPLEFS_SB(sb);
+    struct buffer_head *bh;
+    struct block_device *bdev;
+    int hblock, blocksize;
+    unsigned long long sb_block, start, len;
+    unsigned long offset;
+    journal_t *journal;
+    int errno = 0;
+
+#if SIMPLEFS_AT_LEAST(6, 8, 0)
+    struct bdev_handle *bdev_handle;
+    bdev_handle = bdev_open_by_dev(
+        journal_dev, BLK_OPEN_READ | BLK_OPEN_WRITE | BLK_OPEN_RESTRICT_WRITES,
+        sb, &fs_holder_ops);
+#elif SIMPLEFS_AT_LEAST(6, 7, 0)
+    struct bdev_handle *bdev_handle;
+    up_write(&sb->s_umount);
+    bdev_handle = bdev_open_by_dev(journal_dev, BLK_OPEN_READ | BLK_OPEN_WRITE,
+                                   sb, &fs_holder_ops);
+    down_write(&sb->s_umount);
+#elif SIMPLEFS_AT_LEAST(6, 6, 0)
+    up_write(&sb->s_umount);
+    bdev = blkdev_get_by_dev(journal_dev, BLK_OPEN_READ | BLK_OPEN_WRITE, sb,
+                             &fs_holder_ops);
+    down_write(&sb->s_umount);
+#elif SIMPLEFS_AT_LEAST(6, 5, 0)
+    bdev = blkdev_get_by_dev(journal_dev, BLK_OPEN_READ | BLK_OPEN_WRITE, sb,
+                             NULL);
+#elif SIMPLEFS_AT_LEAST(5, 10, 0)
+    bdev = blkdev_get_by_dev(journal_dev, FMODE_READ | FMODE_WRITE | FMODE_EXCL,
+                             sb);
+#endif
+
+
+#if SIMPLEFS_AT_LEAST(6, 8, 0)
+    if (IS_ERR(bdev_handle)) {
+        printk(KERN_ERR
+               "failed to open journal device unknown-block(%u,%u) %ld\n",
+               MAJOR(journal_dev), MINOR(journal_dev), PTR_ERR(bdev_handle));
+        return ERR_CAST(bdev_handle);
+    }
+    bdev = bdev_handle->bdev;
+#elif SIMPLEFS_AT_LEAST(5, 10, 0)
+    if (IS_ERR(bdev)) {
+        printk(KERN_ERR "failed to open block device (%u:%u), error: %ld\n",
+               MAJOR(journal_dev), MINOR(journal_dev), PTR_ERR(bdev));
+        return ERR_CAST(bdev);
+    }
+#endif
+
+    blocksize = sb->s_blocksize;
+    hblock = bdev_logical_block_size(bdev);
+
+    if (blocksize < hblock) {
+        pr_err("blocksize too small for journal device\n");
+        errno = -EINVAL;
+        goto out_bdev;
+    }
+
+    sb_block = SIMPLEFS_BLOCK_SIZE / blocksize;
+    offset = SIMPLEFS_BLOCK_SIZE % blocksize;
+    set_blocksize(bdev, blocksize);
+    bh = __bread(bdev, sb_block, blocksize);
+
+    if (!bh) {
+        pr_err("couldn't read superblock of external journal\n");
+        errno = -EINVAL;
+        goto out_bdev;
+    }
+    /*
+     * FIXME: Currently, the exact size of the external journal device is not
+     * available. Therefore, we use the device size divided by the block size to
+     * set `len`. Hint: External device size available now is 8MB.
+     *
+     * Future implementation might need to change to:
+     * len = CapacityOfJournalDevice / SIMPLEFS_BLOCK_SIZE
+     */
+
+    len = 2048;
+    start = sb_block;
+    brelse(bh);
+
+#if SIMPLEFS_AT_LEAST(6, 8, 0)
+    journal = jbd2_journal_init_dev(bdev_handle->bdev, sb->s_bdev, start, len,
+                                    sb->s_blocksize);
+#elif SIMPLEFS_AT_LEAST(5, 15, 0)
+    journal = jbd2_journal_init_dev(bdev, sb->s_bdev, start, len, blocksize);
+#endif
+
+    if (IS_ERR(journal)) {
+        pr_err(
+            "simplefs_get_dev_journal: failed to initialize journal, error "
+            "%ld\n",
+            PTR_ERR(journal));
+        errno = PTR_ERR(journal);
+        goto out_bdev;
+    }
+
+#if SIMPLEFS_AT_LEAST(6, 8, 0)
+    sbi->s_journal_bdev_handle = bdev_handle;
+#elif SIMPLEFS_AT_LEAST(5, 15, 0)
+    sbi->s_journal_bdev = bdev;
+#endif
+
+    journal->j_private = sb;
+    return journal;
+
+out_bdev:
+#if SIMPLEFS_AT_LEAST(6, 7, 0)
+    bdev_release(bdev_handle);
+#elif SIMPLEFS_AT_LEAST(6, 5, 0)
+    blkdev_put(bdev, sb);
+#elif SIMPLEFS_AT_LEAST(5, 10, 0)
+    blkdev_put(bdev, FMODE_READ | FMODE_WRITE | FMODE_EXCL);
+#endif
+    return NULL;
+}
+
+static int simplefs_load_journal(struct super_block *sb,
+                                 unsigned long journal_devnum)
+{
+    journal_t *journal;
+    struct simplefs_sb_info *sbi = SIMPLEFS_SB(sb);
+    dev_t journal_dev;
+    int err = 0;
+    journal_dev = new_decode_dev(journal_devnum);
+    int really_read_only;
+    int journal_dev_ro;
+
+    journal = simplefs_get_dev_journal(sb, journal_dev);
+    if (IS_ERR(journal)) {
+        pr_err("Failed to get journal from device, error %ld\n",
+               PTR_ERR(journal));
+        return PTR_ERR(journal);
+    }
+
+    journal_dev_ro = bdev_read_only(journal->j_dev);
+    really_read_only = bdev_read_only(sb->s_bdev) | journal_dev_ro;
+
+    if (journal_dev_ro && !sb_rdonly(sb)) {
+        pr_err("journal device read-only, try mounting with '-o ro'\n");
+        err = -EROFS;
+        goto err_out;
+    }
+
+    err = jbd2_journal_wipe(journal, !really_read_only);
+
+    if (!err) {
+        err = jbd2_journal_load(journal);
+        if (err) {
+            pr_err("error loading journal, error %d\n", err);
+            goto err_out;
+        }
+    }
+
+    sbi->journal = journal;
+
+    return 0;
+
+err_out:
+    jbd2_journal_destroy(journal);
+    return err;
+}
+
+/* we use SIMPLEFS_OPT_JOURNAL_PATH case to load external journal device now */
+#define SIMPLEFS_OPT_JOURNAL_DEV 1
+#define SIMPLEFS_OPT_JOURNAL_PATH 2
+static const match_table_t tokens = {
+    {SIMPLEFS_OPT_JOURNAL_DEV, "journal_dev=%u"},
+    {SIMPLEFS_OPT_JOURNAL_PATH, "journal_path=%s"},
+};
+static int simplefs_parse_options(struct super_block *sb, char *options)
+{
+    substring_t args[MAX_OPT_ARGS];
+    int token, ret = 0, arg;
+    char *p;
+    char *journal_path;
+    struct inode *journal_inode;
+    struct path path;
+
+    pr_info("simplefs_parse_options: parsing options '%s'\n", options);
+
+    while ((p = strsep(&options, ","))) {
+        if (!*p)
+            continue;
+
+        args[0].to = args[0].from = NULL;
+        token = match_token(p, tokens, args);
+
+        switch (token) {
+        case SIMPLEFS_OPT_JOURNAL_DEV:
+            if (args->from && match_int(args, &arg)) {
+                pr_err("simplefs_parse_options: match_int failed\n");
+                return 1;
+            }
+            if ((ret = simplefs_load_journal(sb, arg))) {
+                pr_err(
+                    "simplefs_parse_options: simplefs_load_journal failed with "
+                    "%d\n",
+                    ret);
+                return ret;
+            }
+            break;
+
+        case SIMPLEFS_OPT_JOURNAL_PATH: {
+            journal_path = match_strdup(&args[0]);
+            if (!journal_path) {
+                pr_err("simplefs_parse_options: match_strdup failed\n");
+                return -ENOMEM;
+            }
+            ret = kern_path(journal_path, LOOKUP_FOLLOW, &path);
+            if (ret) {
+                pr_err(
+                    "simplefs_parse_options: kern_path failed with error %d\n",
+                    ret);
+                kfree(journal_path);
+                return ret;
+            }
+
+            journal_inode = path.dentry->d_inode;
+
+            path_put(&path);
+            kfree(journal_path);
+
+            if (S_ISBLK(journal_inode->i_mode)) {
+                unsigned long journal_devnum =
+                    new_encode_dev(journal_inode->i_rdev);
+                if ((ret = simplefs_load_journal(sb, journal_devnum))) {
+                    pr_err(
+                        "simplefs_parse_options: simplefs_load_journal failed "
+                        "with %d\n",
+                        ret);
+                    return ret;
+                }
+            }
+            break;
+        }
+        }
+    }
 
     return 0;
 }
@@ -317,6 +611,13 @@ int simplefs_fill_super(struct super_block *sb, void *data, int silent)
     if (!sb->s_root) {
         ret = -ENOMEM;
         goto iput;
+    }
+
+    ret = simplefs_parse_options(sb, data);
+    if (ret) {
+        pr_err("simplefs_fill_super: Failed to parse options, error code: %d\n",
+               ret);
+        return ret;
     }
 
     return 0;

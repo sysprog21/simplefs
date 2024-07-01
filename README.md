@@ -172,9 +172,85 @@ struct simplefs_extent
                                  +---------+
 ```
 
-## TODO
+### journalling support
 
-- journalling support
+Simplefs now includes support for an external journal device, leveraging the journaling block device (jbd2) subsystem in the Linux kernel. This enhancement improves the file system's resilience by maintaining a log of changes, which helps prevent corruption and facilitates recovery in the event of a crash or power failure.
+
+
+The journaling support in simplefs is implemented using the jbd2 subsystem, which is a widely-used journaling layer in Linux. Currently, simplefs primarily stores the journal-related information in an external journal device.
+
+For a detailed introduction to journaling, please refer to these two websites:
+[Journal(jbd2) document](https://www.kernel.org/doc/html/latest/filesystems/ext4/journal.html)
+[Journal(jbd2) api](https://docs.kernel.org/filesystems/journalling.html) 
+
+External journal device disk layout:
+
++--------------------+------------------+---------------------------+--------------+
+| Journal Superblock | Descriptor Block | Metadata/Data ( modified ) | Commit Block |
++--------------------+------------------+---------------------------+--------------+
+
+Hint:
+Each transaction starts with a descriptor block, followed by several metadata blocks or data blocks, and ends with a commit block. Every modified metadata (such as inode, bitmap, etc.) occupies its own block. Currently, simplefs primarily records "extent" metadata.
+
+
+How to Enable Journaling in simplefs: 
+
+Step 1: Create the Journal Disk Image
+To create an 8MB disk image for the journal, use the following make command:
+
+Note: 
+Assuming an 8 MB size for the external journal device, which is an arbitrary choice for now, I will set the journal block length to a fixed 2048, calculated by dividing the device size by the block size (4096 bytes).
+
+```shell
+$ make journal
+```
+
+Step 2:  Make sure you've loaded the SimpleFS Kernel Module
+
+```shell
+$ insmod simplefs/simplefs.ko
+```
+
+Step 3: Setup the Loop Device for the Journal
+Find an available loop device and associate it with the journal image:
+
+``` shell
+$ loop_device=$(losetup -f)
+$ losetup $loop_device /simplefs/journal.img
+```
+
+You shall get the following kernel messages:
+```
+loop0: detected capacity change from 0 to 16384
+```
+
+Step 4: Mount the SimpleFS File System with the External Journal
+Mount the SimpleFS file system along with the external journal device using the following command:
+
+```shell
+mount -o loop,rw,owner,group,users,journal_path="$loop_device" -t simplefs /simplefs/test.img /test
+```
+
+Corresponding kernel message:
+```
+loop1: detected capacity change from 0 to 409600
+simplefs: simplefs_parse_options: parsing options 'owner,group,journal_path=/dev/loop0'
+simplefs: '/dev/loop1' mount success
+```
+
+Current Limitations and Known Issues
+
+1. External Journal Device Size:
+
+- The exact size of the external journal device cannot be determined. As a temporary solution, the size is set by dividing the device size by the block size, with the external journal device size fixed at 8 MB.
+
+2. Metadata Recording:
+
+- At present, only "extent" metadata is recorded. In the future, additional metadata such as "super block" and inode metadata can be included.
+
+3. Implementation of External Journal Device:
+
+- Only the external journal device is implemented. Future improvements can include the use of an internal journal (inode journal). However, this will require the addition of a bmap function and appropriate adjustments to the disk partition during mkfs.
 
 ## License
 
