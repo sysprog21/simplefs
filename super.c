@@ -37,6 +37,9 @@ int simplefs_init_inode_cache(void)
 /* De-allocate the inode cache */
 void simplefs_destroy_inode_cache(void)
 {
+    /* wait for call_rcu() and prevent the free cache be used */
+    rcu_barrier();
+
     kmem_cache_destroy(simplefs_inode_cache);
 }
 

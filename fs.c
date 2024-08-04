@@ -58,6 +58,8 @@ static int __init simplefs_init(void)
 
 err_inode:
     simplefs_destroy_inode_cache();
+    /* Only after rcu_barrier() is the memory guaranteed to be freed. */
+    rcu_barrier();
 err:
     return ret;
 }
@@ -69,6 +71,8 @@ static void __exit simplefs_exit(void)
         pr_err("Failed to unregister file system\n");
 
     simplefs_destroy_inode_cache();
+    /* Only after rcu_barrier() is the memory guaranteed to be freed. */
+    rcu_barrier();
 
     pr_info("module unloaded\n");
 }
