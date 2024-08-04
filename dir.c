@@ -60,9 +60,11 @@ static int simplefs_iterate(struct file *dir, struct dir_context *ctx)
                 goto release_bh;
             }
             dblock = (struct simplefs_dir_block *) bh2->b_data;
-            if (dblock->files[0].inode == 0)
+            if (dblock->files[0].inode == 0) {
+                brelse(bh2);
+                bh2 = NULL;
                 break;
-
+            }
             /* Iterate every file in one block */
             for (; fi < SIMPLEFS_FILES_PER_BLOCK; fi++) {
                 f = &dblock->files[fi];
