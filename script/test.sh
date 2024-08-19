@@ -13,7 +13,7 @@ MAXFILES=40920        # max files per dir
 MOUNT_TEST=100
 
 test_op() {
-    local op=$1 
+    local op=$1
     echo
     echo -n "Testing cmd: $op..."
     sudo sh -c "$op" >/dev/null && echo "Success"
@@ -26,7 +26,7 @@ check_exist() {
     echo
     echo -n "Check if exist: $mode $nlink $name..."
     sudo ls -lR  | grep -e "$mode $nlink".*$name >/dev/null && echo "Success" || \
-    echo "Failed" 
+    echo "Failed"
 }
 
 if [ "$EUID" -eq 0 ]
@@ -34,7 +34,7 @@ if [ "$EUID" -eq 0 ]
   exit
 fi
 
-mkdir -p test  
+mkdir -p test
 sudo umount test 2>/dev/null
 sleep 1
 sudo rmmod simplefs 2>/dev/null
@@ -123,12 +123,22 @@ test_op 'dd if=/dev/zero of=file bs=1M count=12 status=none'
 filesize=$(sudo ls -lR  | grep -e "$F_MOD 2".*file | awk '{print $5}')
 test $filesize -le $MAXFILESIZE || echo "Failed, file size over the limit"
 
+# test remove symbolic link
+test_op 'ln -s file symlink_fake'
+test_op 'rm -f symlink_fake'
+test_op 'touch symlink_fake'
+test_op 'ln file symlink_hard_fake'
+test_op 'rm -f symlink_hard_fake'
+test_op 'touch symlink_hard_fake'
+
 # test if exist
-check_exist $D_MOD 3 dir 
+check_exist $D_MOD 3 dir
 check_exist $F_MOD 2 file
 check_exist $F_MOD 2 hdlink
 check_exist $D_MOD 2 dir
-check_exist $S_MOD 1 symlink 
+check_exist $S_MOD 1 symlink
+check_exist $F_MOD 1 symlink_fake
+check_exist $F_MOD 1 symlink_hard_fake
 
 sleep 1
 popd >/dev/null
