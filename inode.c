@@ -653,8 +653,6 @@ clean_inode:
 #endif
 
     inode_dec_link_count(inode);
-    drop_nlink(inode);
-    mark_inode_dirty(inode);
 
     /* Free inode and index block from bitmap */
     if (!S_ISLNK(inode->i_mode))
