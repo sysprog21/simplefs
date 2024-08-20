@@ -640,7 +640,6 @@ clean_inode:
     inode->i_size = 0;
     i_uid_write(inode, 0);
     i_gid_write(inode, 0);
-    inode->i_mode = 0;
 
 #if SIMPLEFS_AT_LEAST(6, 7, 0)
     inode_set_mtime(inode, 0, 0);
@@ -654,11 +653,11 @@ clean_inode:
 #endif
 
     inode_dec_link_count(inode);
-    drop_nlink(inode);
-    mark_inode_dirty(inode);
 
     /* Free inode and index block from bitmap */
-    put_blocks(sbi, bno, 1);
+    if (!S_ISLNK(inode->i_mode))
+        put_blocks(sbi, bno, 1);
+    inode->i_mode = 0;
     put_inode(sbi, ino);
 
     return ret;
