@@ -123,6 +123,18 @@ test_op 'dd if=/dev/zero of=file bs=1M count=12 status=none'
 filesize=$(sudo ls -lR  | grep -e "$F_MOD 2".*file | awk '{print $5}')
 test $filesize -le $MAXFILESIZE || echo "Failed, file size over the limit"
 
+# Write the file size larger than BLOCK_SIZE
+# test serial to write
+test_op 'bash -c "printf \"%.0s123456789\" {1..1600} > file.txt"'
+count=$(awk '{count += gsub(/123456789/, "")} END {print count}' "file.txt")
+echo "test $count"
+test "$count" -eq 1600 || echo "Failed, file size not matching"
+# test block to write
+test_op 'cat file.txt > checkfile.txt'
+count=$(awk '{count += gsub(/123456789/, "")} END {print count}' "checkfile.txt")
+echo "test $count"
+test "$count" -eq 1600 || echo "Failed, file size not matching"
+
 # test remove symbolic link
 test_op 'ln -s file symlink_fake'
 test_op 'rm -f symlink_fake'

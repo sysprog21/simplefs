@@ -413,7 +413,7 @@ static ssize_t simplefs_write(struct file *file,
         size_t bytes_to_write =
             min_t(size_t, len, SIMPLEFS_BLOCK_SIZE - pos % SIMPLEFS_BLOCK_SIZE);
 
-        if (copy_from_user(bh_data->b_data + pos % SIMPLEFS_BLOCK_SIZE, buf,
+        if (copy_from_user(bh_data->b_data + pos % SIMPLEFS_BLOCK_SIZE, buf + bytes_write,
                            bytes_to_write)) {
             brelse(bh_data);
             bytes_write = -EFAULT;
