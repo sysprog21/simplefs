@@ -26,7 +26,7 @@ _Static_assert(sizeof(struct superblock) == SIMPLEFS_BLOCK_SIZE);
  *
  * Return the result of n / d, rounded up to the nearest integer.
  */
-#define DIV_ROUND_UP(n, d) (((n) + (d) -1) / (d))
+#define DIV_ROUND_UP(n, d) (((n) + (d) - 1) / (d))
 
 static struct superblock *write_superblock(int fd, struct stat *fstats)
 {
