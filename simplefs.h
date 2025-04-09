@@ -60,29 +60,6 @@ struct simplefs_inode {
 #define SIMPLEFS_INODES_PER_BLOCK \
     (SIMPLEFS_BLOCK_SIZE / sizeof(struct simplefs_inode))
 
-struct simplefs_sb_info {
-    uint32_t magic; /* Magic number */
-
-    uint32_t nr_blocks; /* Total number of blocks (incl sb & inodes) */
-    uint32_t nr_inodes; /* Total number of inodes */
-
-    uint32_t nr_istore_blocks; /* Number of inode store blocks */
-    uint32_t nr_ifree_blocks;  /* Number of inode free bitmap blocks */
-    uint32_t nr_bfree_blocks;  /* Number of block free bitmap blocks */
-
-    uint32_t nr_free_inodes; /* Number of free inodes */
-    uint32_t nr_free_blocks; /* Number of free blocks */
-
-#ifdef __KERNEL__
-    journal_t *journal;
-    struct block_device *s_journal_bdev; /* v5.10+ external journal device */
-    struct bdev_handle
-        *s_journal_bdev_handle;  /* v6.7+ external journal device */
-    unsigned long *ifree_bitmap; /* In-memory free inodes bitmap */
-    unsigned long *bfree_bitmap; /* In-memory free blocks bitmap */
-#endif
-};
-
 #ifdef __KERNEL__
 #include <linux/version.h>
 /* compatibility macros */
@@ -151,5 +128,32 @@ extern uint32_t simplefs_ext_search(struct simplefs_file_ei_block *index,
     (container_of(inode, struct simplefs_inode_info, vfs_inode))
 
 #endif /* __KERNEL__ */
+
+struct simplefs_sb_info {
+    uint32_t magic; /* Magic number */
+
+    uint32_t nr_blocks; /* Total number of blocks (incl sb & inodes) */
+    uint32_t nr_inodes; /* Total number of inodes */
+
+    uint32_t nr_istore_blocks; /* Number of inode store blocks */
+    uint32_t nr_ifree_blocks;  /* Number of inode free bitmap blocks */
+    uint32_t nr_bfree_blocks;  /* Number of block free bitmap blocks */
+
+    uint32_t nr_free_inodes; /* Number of free inodes */
+    uint32_t nr_free_blocks; /* Number of free blocks */
+
+#ifdef __KERNEL__
+    journal_t *journal;
+    struct block_device *s_journal_bdev; /* v5.10+ external journal device */
+#if SIMPLEFS_AT_LEAST(6, 9, 0)
+    struct file *s_journal_bdev_file; /* v6.11 external journal device */
+#elif SIMPLEFS_AT_LEAST(6, 7, 0)
+    struct bdev_handle
+        *s_journal_bdev_handle; /* v6.7+ external journal device */
+#endif
+    unsigned long *ifree_bitmap; /* In-memory free inodes bitmap */
+    unsigned long *bfree_bitmap; /* In-memory free blocks bitmap */
+#endif
+};
 
 #endif /* SIMPLEFS_H */

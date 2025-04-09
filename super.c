@@ -131,8 +131,12 @@ static void simplefs_put_super(struct super_block *sb)
 
     sync_blockdev(sb->s_bdev);
     invalidate_bdev(sb->s_bdev);
-
-#if SIMPLEFS_AT_LEAST(6, 7, 0)
+#if SIMPLEFS_AT_LEAST(6, 9, 0)
+    if (sbi->s_journal_bdev_file) {
+        sync_blockdev(file_bdev(sbi->s_journal_bdev_file));
+        invalidate_bdev(file_bdev(sbi->s_journal_bdev_file));
+    }
+#elif SIMPLEFS_AT_LEAST(6, 7, 0)
     if (sbi->s_journal_bdev_handle) {
         sync_blockdev(sbi->s_journal_bdev_handle->bdev);
         invalidate_bdev(sbi->s_journal_bdev_handle->bdev);
@@ -258,8 +262,12 @@ static journal_t *simplefs_get_dev_journal(struct super_block *sb,
     unsigned long offset;
     journal_t *journal;
     int errno = 0;
-
-#if SIMPLEFS_AT_LEAST(6, 8, 0)
+#if SIMPLEFS_AT_LEAST(6, 9, 0)
+    struct file *bdev_file;
+    bdev_file = bdev_file_open_by_dev(
+        journal_dev, BLK_OPEN_READ | BLK_OPEN_WRITE | BLK_OPEN_RESTRICT_WRITES,
+        sb, &fs_holder_ops);
+#elif SIMPLEFS_AT_LEAST(6, 8, 0)
     struct bdev_handle *bdev_handle;
     bdev_handle = bdev_open_by_dev(
         journal_dev, BLK_OPEN_READ | BLK_OPEN_WRITE | BLK_OPEN_RESTRICT_WRITES,
@@ -283,8 +291,15 @@ static journal_t *simplefs_get_dev_journal(struct super_block *sb,
                              sb);
 #endif
 
-
-#if SIMPLEFS_AT_LEAST(6, 8, 0)
+#if SIMPLEFS_AT_LEAST(6, 9, 0)
+    if (IS_ERR(bdev_file)) {
+        printk(KERN_ERR
+               "failed to open journal device unknown-block(%u,%u) %ld\n",
+               MAJOR(journal_dev), MINOR(journal_dev), PTR_ERR(bdev_file));
+        return ERR_CAST(bdev_file);
+    }
+    bdev = file_bdev(bdev_file);
+#elif SIMPLEFS_AT_LEAST(6, 7, 0)
     if (IS_ERR(bdev_handle)) {
         printk(KERN_ERR
                "failed to open journal device unknown-block(%u,%u) %ld\n",
@@ -311,7 +326,12 @@ static journal_t *simplefs_get_dev_journal(struct super_block *sb,
 
     sb_block = SIMPLEFS_BLOCK_SIZE / blocksize;
     offset = SIMPLEFS_BLOCK_SIZE % blocksize;
+
+#if SIMPLEFS_AT_LEAST(6, 9, 0)
+    set_blocksize(bdev_file, blocksize);
+#elif SIMPLEFS_AT_LEAST(6, 7, 0)
     set_blocksize(bdev, blocksize);
+#endif
     bh = __bread(bdev, sb_block, blocksize);
 
     if (!bh) {
@@ -332,7 +352,10 @@ static journal_t *simplefs_get_dev_journal(struct super_block *sb,
     start = sb_block;
     brelse(bh);
 
-#if SIMPLEFS_AT_LEAST(6, 8, 0)
+#if SIMPLEFS_AT_LEAST(6, 9, 0)
+    journal = jbd2_journal_init_dev(file_bdev(bdev_file), sb->s_bdev, start,
+                                    len, sb->s_blocksize);
+#elif SIMPLEFS_AT_LEAST(6, 7, 0)
     journal = jbd2_journal_init_dev(bdev_handle->bdev, sb->s_bdev, start, len,
                                     sb->s_blocksize);
 #elif SIMPLEFS_AT_LEAST(5, 15, 0)
@@ -347,10 +370,14 @@ static journal_t *simplefs_get_dev_journal(struct super_block *sb,
         errno = PTR_ERR(journal);
         goto out_bdev;
     }
-
-#if SIMPLEFS_AT_LEAST(6, 8, 0)
+#if SIMPLEFS_AT_LEAST(6, 9, 0)
+    sbi->s_journal_bdev_file = bdev_file;
+    pr_info("6.11 kernel");
+#elif SIMPLEFS_AT_LEAST(6, 7, 0)
     sbi->s_journal_bdev_handle = bdev_handle;
+    pr_info("6.8 kernel");
 #elif SIMPLEFS_AT_LEAST(5, 15, 0)
+    pr_info("5.15 kernel");
     sbi->s_journal_bdev = bdev;
 #endif
 
@@ -358,7 +385,9 @@ static journal_t *simplefs_get_dev_journal(struct super_block *sb,
     return journal;
 
 out_bdev:
-#if SIMPLEFS_AT_LEAST(6, 7, 0)
+#if SIMPLEFS_AT_LEAST(6, 9, 0)
+    fput(bdev_file);
+#elif SIMPLEFS_AT_LEAST(6, 7, 0)
     bdev_release(bdev_handle);
 #elif SIMPLEFS_AT_LEAST(6, 5, 0)
     blkdev_put(bdev, sb);
@@ -375,10 +404,10 @@ static int simplefs_load_journal(struct super_block *sb,
     struct simplefs_sb_info *sbi = SIMPLEFS_SB(sb);
     dev_t journal_dev;
     int err = 0;
-    journal_dev = new_decode_dev(journal_devnum);
     int really_read_only;
     int journal_dev_ro;
 
+    journal_dev = new_decode_dev(journal_devnum);
     journal = simplefs_get_dev_journal(sb, journal_dev);
     if (IS_ERR(journal)) {
         pr_err("Failed to get journal from device, error %ld\n",
