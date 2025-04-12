@@ -142,6 +142,8 @@ struct simplefs_sb_info {
     uint32_t nr_free_inodes; /* Number of free inodes */
     uint32_t nr_free_blocks; /* Number of free blocks */
 
+    unsigned long *ifree_bitmap; /* In-memory free inodes bitmap */
+    unsigned long *bfree_bitmap; /* In-memory free blocks bitmap */
 #ifdef __KERNEL__
     journal_t *journal;
     struct block_device *s_journal_bdev; /* v5.10+ external journal device */
@@ -150,10 +152,8 @@ struct simplefs_sb_info {
 #elif SIMPLEFS_AT_LEAST(6, 7, 0)
     struct bdev_handle
         *s_journal_bdev_handle; /* v6.7+ external journal device */
-#endif
-    unsigned long *ifree_bitmap; /* In-memory free inodes bitmap */
-    unsigned long *bfree_bitmap; /* In-memory free blocks bitmap */
-#endif
+#endif /* SIMPLEFS_AT_LEAST */
+#endif /* __KERNEL__ */
 };
 
 #endif /* SIMPLEFS_H */
