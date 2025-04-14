@@ -25,6 +25,14 @@ struct dentry *simplefs_mount(struct file_system_type *fs_type,
 /* Unmount a simplefs partition */
 void simplefs_kill_sb(struct super_block *sb)
 {
+    struct simplefs_sb_info *sbi = SIMPLEFS_SB(sb);
+#if SIMPLEFS_AT_LEAST(6, 9, 0)
+    if (sbi->s_journal_bdev_file)
+        fput(sbi->s_journal_bdev_file);
+#elif SIMPLEFS_AT_LEAST(6, 7, 0)
+    if (sbi->s_journal_bdev_handle)
+        bdev_release(sbi->s_journal_bdev_handle);
+#endif
     kill_block_super(sb);
 
     pr_info("unmounted disk\n");
