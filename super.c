@@ -372,12 +372,9 @@ static journal_t *simplefs_get_dev_journal(struct super_block *sb,
     }
 #if SIMPLEFS_AT_LEAST(6, 9, 0)
     sbi->s_journal_bdev_file = bdev_file;
-    pr_info("6.11 kernel");
 #elif SIMPLEFS_AT_LEAST(6, 7, 0)
     sbi->s_journal_bdev_handle = bdev_handle;
-    pr_info("6.8 kernel");
 #elif SIMPLEFS_AT_LEAST(5, 15, 0)
-    pr_info("5.15 kernel");
     sbi->s_journal_bdev = bdev;
 #endif
 
