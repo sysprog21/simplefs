@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+. script/test_large_file.sh
+
 SIMPLEFS_MOD=simplefs.ko
 IMAGE=$1
 IMAGESIZE=$2
@@ -47,13 +49,6 @@ dd if=/dev/zero of=$IMAGE bs=1M count=$IMAGESIZE status=none && \
 sudo mount -t simplefs -o loop $IMAGE test && \
 pushd test >/dev/null
 
-# mkdir
-test_op 'mkdir dir'
-test_op 'mkdir dir' # expected to fail
-
-# create file
-test_op 'touch file'
-
 # create 40920 files
 for ((i=0; i<=$MAXFILES; i++))
 do
@@ -98,6 +93,21 @@ do
     fi
 done
 find . -name 'file_[0-9]*.txt' | xargs sudo rm || { echo "Failed to delete files"; exit 1; }
+sync
+
+popd >/dev/null || { echo "popd failed"; exit 1; }
+ls test -laR
+rm test/* -rf
+nr_free_blk=$(($(dd if=$IMAGE bs=1 skip=28 count=4 2>/dev/null | hexdump -v -e '1/4 "0x%08x\n"')))
+echo "$nr_free_blk"
+pushd test >/dev/null || { echo "pushd failed"; exit 1; }
+
+# mkdir
+test_op 'mkdir dir'
+test_op 'mkdir dir' # expected to fail
+
+# create file
+test_op 'touch file'
 
 # hard link
 test_op 'ln file hdlink'
@@ -119,21 +129,11 @@ test_op 'echo abc > file'
 test $(cat file) = "abc" || echo "Failed to write"
 
 # file too large
-test_op 'dd if=/dev/zero of=file bs=1M count=12 status=none'
-filesize=$(sudo ls -lR  | grep -e "$F_MOD 2".*file | awk '{print $5}')
-test $filesize -le $MAXFILESIZE || echo "Failed, file size over the limit"
+test_too_large_file
 
 # Write the file size larger than BLOCK_SIZE
 # test serial to write
-test_op 'printf \"%.0s123456789\" {1..1600} > file.txt'
-count=$(awk '{count += gsub(/123456789/, "")} END {print count}' "file.txt")
-echo "test $count"
-test "$count" -eq 1600 || echo "Failed, file size not matching"
-# test block to write
-test_op 'cat file.txt > checkfile.txt'
-count=$(awk '{count += gsub(/123456789/, "")} END {print count}' "checkfile.txt")
-echo "test $count"
-test "$count" -eq 1600 || echo "Failed, file size not matching"
+test_file_size_larger_than_block_size
 
 # test remove symbolic link
 test_op 'ln -s file symlink_fake'
@@ -152,7 +152,13 @@ check_exist $S_MOD 1 symlink
 check_exist $F_MOD 1 symlink_fake
 check_exist $F_MOD 1 symlink_hard_fake
 
+# clean all files and directories
+test_op 'rm -rf ./*'
+
 sleep 1
 popd >/dev/null
 sudo umount test
 sudo rmmod simplefs
+
+af_nr_free_blk=$(($(dd if=$IMAGE bs=1 skip=28 count=4 2>/dev/null | hexdump -v -e '1/4 "0x%08x\n"')))
+test $nr_free_blk -eq $af_nr_free_blk || echo "Failed, some blocks are not be reclaimed"
