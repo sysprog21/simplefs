@@ -603,8 +603,6 @@ static int simplefs_unlink(struct inode *dir, struct dentry *dentry)
     if (!bh)
         goto clean_inode;
     file_block = (struct simplefs_file_ei_block *) bh->b_data;
-    if (S_ISDIR(inode->i_mode))
-        goto scrub;
 
     for (ei = 0; ei < SIMPLEFS_MAX_EXTENTS; ei++) {
         char *block;
@@ -627,7 +625,6 @@ static int simplefs_unlink(struct inode *dir, struct dentry *dentry)
         }
     }
 
-scrub:
     /* Scrub index block */
     memset(file_block, 0, SIMPLEFS_BLOCK_SIZE);
     mark_buffer_dirty(bh);
