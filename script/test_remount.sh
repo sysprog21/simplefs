@@ -1,18 +1,3 @@
-# test create max nr files
-test_create_max_nr_files() {
-    echo "max size $MAXFILESIZE"
-    # create 40920 files
-    for ((i=0; i<=$MAXFILES; i++))
-    do
-        test_op "touch $i.txt" # expected to fail with more than 40920 files
-    done
-    sync
-    filecnts=$(ls | wc -w)
-    test $filecnts -eq $MAXFILES || echo "Failed($filecnts), it should be $MAXFILES files"
-    find . -name '[0-9]*.txt' | xargs -n 2000 sudo rm
-    sync
-}
-
 # create 100 files with filenames inside
 test_remount_file_exist() {
     for ((i=1; i<=$MOUNT_TEST; i++))

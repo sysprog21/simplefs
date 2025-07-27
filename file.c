@@ -51,14 +51,14 @@ static int simplefs_file_get_block(struct inode *inode,
             ret = 0;
             goto brelse_index;
         }
-        bno = get_free_blocks(sb, 8);
+        bno = get_free_blocks(sb, SIMPLEFS_MAX_BLOCKS_PER_EXTENT);
         if (!bno) {
             ret = -ENOSPC;
             goto brelse_index;
         }
 
         index->extents[extent].ee_start = bno;
-        index->extents[extent].ee_len = 8;
+        index->extents[extent].ee_len = SIMPLEFS_MAX_BLOCKS_PER_EXTENT;
         index->extents[extent].ee_block =
             extent ? index->extents[extent - 1].ee_block +
                          index->extents[extent - 1].ee_len
@@ -386,13 +386,13 @@ static ssize_t simplefs_write(struct file *file,
     while (len > 0) {
         /* check if block is allocated */
         if (ei_block->extents[ei_index].ee_start == 0) {
-            int bno = get_free_blocks(sb, 8);
+            int bno = get_free_blocks(sb, SIMPLEFS_MAX_BLOCKS_PER_EXTENT);
             if (!bno) {
                 bytes_write = -ENOSPC;
                 break;
             }
             ei_block->extents[ei_index].ee_start = bno;
-            ei_block->extents[ei_index].ee_len = 8;
+            ei_block->extents[ei_index].ee_len = SIMPLEFS_MAX_BLOCKS_PER_EXTENT;
             ei_block->extents[ei_index].ee_block =
                 ei_index ? ei_block->extents[ei_index - 1].ee_block +
                                ei_block->extents[ei_index - 1].ee_len

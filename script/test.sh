@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 
+. script/config
 . script/test_func.sh
 . script/test_large_file.sh
 . script/test_remount.sh
-. script/config
+. script/rand_rm_and_create.sh
 
 SIMPLEFS_MOD=simplefs.ko
 IMAGE=$1
@@ -31,6 +32,15 @@ pushd test >/dev/null
 
 # test serial to write
 test_create_max_nr_files
+
+test_rand_access_files 0 2
+sync
+test_rand_access_files 1 2
+sync
+test_rand_access_files_exist
+sync
+test_rm_all_files
+
 # test remount file exist or not
 test_remount_file_exist
 

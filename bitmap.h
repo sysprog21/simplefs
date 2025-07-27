@@ -52,8 +52,9 @@ static inline uint32_t get_free_blocks(struct super_block *sb, uint32_t len)
         return 0;
 
     sbi->nr_free_blocks -= len;
+    struct buffer_head *bh;
     for (i = 0; i < len; i++) {
-        struct buffer_head *bh = sb_bread(sb, ret + i);
+        bh = sb_bread(sb, ret + i);
         if (!bh) {
             pr_err("get_free_blocks: sb_bread failed for block %d\n", ret + i);
             sbi->nr_free_blocks += len;
