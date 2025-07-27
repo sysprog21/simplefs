@@ -113,7 +113,14 @@ static int simplefs_writepage(struct page *page, struct writeback_control *wbc)
  * the data into the page cache. This function checks if the write operation
  * can complete and allocates the necessary blocks through block_write_begin().
  */
-#if SIMPLEFS_AT_LEAST(5, 19, 0)
+#if SIMPLEFS_AT_LEAST(6, 12, 0)
+static int simplefs_write_begin(struct file *file,
+                                struct address_space *mapping,
+                                loff_t pos,
+                                unsigned int len,
+                                struct folio **foliop,
+                                void **fsdata)
+#elif SIMPLEFS_AT_LEAST(5, 19, 0)
 static int simplefs_write_begin(struct file *file,
                                 struct address_space *mapping,
                                 loff_t pos,
@@ -147,7 +154,9 @@ static int simplefs_write_begin(struct file *file,
         return -ENOSPC;
 
         /* prepare the write */
-#if SIMPLEFS_AT_LEAST(5, 19, 0)
+#if SIMPLEFS_AT_LEAST(6, 12, 0)
+    err = block_write_begin(mapping, pos, len, foliop, simplefs_file_get_block);
+#elif SIMPLEFS_AT_LEAST(5, 19, 0)
     err = block_write_begin(mapping, pos, len, pagep, simplefs_file_get_block);
 #else
     err = block_write_begin(mapping, pos, len, flags, pagep,
@@ -163,6 +172,15 @@ static int simplefs_write_begin(struct file *file,
  * cache. This function updates inode metadata and truncates the file if
  * necessary.
  */
+#if SIMPLEFS_AT_LEAST(6, 12, 0)
+static int simplefs_write_end(struct file *file,
+                              struct address_space *mapping,
+                              loff_t pos,
+                              unsigned int len,
+                              unsigned int copied,
+                              struct folio *foliop,
+                              void *fsdata)
+#else
 static int simplefs_write_end(struct file *file,
                               struct address_space *mapping,
                               loff_t pos,
@@ -170,6 +188,7 @@ static int simplefs_write_end(struct file *file,
                               unsigned int copied,
                               struct page *page,
                               void *fsdata)
+#endif
 {
     struct inode *inode = file->f_inode;
     struct simplefs_inode_info *ci = SIMPLEFS_INODE(inode);
@@ -180,7 +199,12 @@ static int simplefs_write_end(struct file *file,
     uint32_t nr_blocks_old;
 
     /* Complete the write() */
+#if SIMPLEFS_AT_LEAST(6, 12, 0)
+    int ret =
+        generic_write_end(file, mapping, pos, len, copied, foliop, fsdata);
+#else
     int ret = generic_write_end(file, mapping, pos, len, copied, page, fsdata);
+#endif
     if (ret < len) {
         pr_err("wrote less than requested.");
         return ret;
