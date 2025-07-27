@@ -81,6 +81,7 @@ struct simplefs_extent {
     uint32_t ee_block; /* first logical block extent covers */
     uint32_t ee_len;   /* number of blocks covered by extent */
     uint32_t ee_start; /* first physical block extent covers */
+    uint32_t nr_files; /* Number of files in this extent */
 };
 
 struct simplefs_file_ei_block {
@@ -90,10 +91,12 @@ struct simplefs_file_ei_block {
 
 struct simplefs_file {
     uint32_t inode;
+    uint32_t nr_blk;
     char filename[SIMPLEFS_FILENAME_LEN];
 };
 
 struct simplefs_dir_block {
+    uint32_t nr_files;
     struct simplefs_file files[SIMPLEFS_FILES_PER_BLOCK];
 };
 

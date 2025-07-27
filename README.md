@@ -101,22 +101,27 @@ on the type of file:
   ```
   inode
   +-----------------------+
-  | i_mode = IFDIR | 0755 |            block 123
-  | ei_block = 123    ----|-------->  +----------------+
-  | i_size = 4 KiB        |         0 | ee_block  = 0  |
-  | i_blocks = 1          |           | ee_len    = 8  |      block 84
-  +-----------------------+           | ee_start  = 84 |--->  +-----------+
-                                      |----------------|    0 | 24 (foo)  |
-                                    1 | ee_block  = 8  |      |-----------|
-                                      | ee_len    = 8  |    1 | 45 (bar)  |
-                                      | ee_start  = 16 |      |-----------|
-                                      |----------------|      | ...       |
-                                      | ...            |      |-----------|
-                                      |----------------|   14 | 0         |
-                                  341 | ee_block  = 0  |      +-----------+
-                                      | ee_len    = 0  |
-                                      | ee_start  = 0  |
-                                      +----------------+
+  | i_mode = IFDIR | 0755 |      block 123 (simplefs_file_ei_block)
+  | ei_block = 123    ----|--->  +----------------+
+  | i_size = 4 KiB        |      | nr_files  = 7  |
+  | i_blocks = 1          |      |----------------|
+  +-----------------------+    0 | ee_block  = 0  |
+                                 | ee_len    = 8  |      block 84(simplefs_dir_block)
+                                 | ee_start  = 84 |--->  +-------------+
+                                 | nr_file   = 2  |      |nr_files = 2 |
+                                 |----------------|      |-------------|
+                               1 | ee_block  = 8  |    0 | inode  = 24 |
+                                 | ee_len    = 8  |      | nr_blk = 1  |
+                                 | ee_start  = 16 |      | (foo)       |
+                                 | nr_file   = 5  |      |-------------|
+                                 |----------------|    1 | inode  = 45 |
+                                 | ...            |      | nr_blk = 14 |
+                                 |----------------|      | (bar)       |
+                             341 | ee_block  = 0  |      |-------------|
+                                 | ee_len    = 0  |      | ...         |
+                                 | ee_start  = 0  |      |-------------|
+                                 | nr_file   = 12 |   14 | 0           |
+                                 +----------------+      +-------------+
 
   ```
   - For a file, it lists the extents that hold the actual data of the file.
@@ -124,25 +129,25 @@ on the type of file:
     bytes, a single block can accommodate up to 341 links. This limitation
     restricts the maximum size of a file to approximately 10.65 MiB (10,912 KiB).
   ```
-  inode                                                
-  +-----------------------+                           
-  | i_mode = IFDIR | 0644 |          block 93       
-  | ei_block = 93     ----|------>  +----------------+      
-  | i_size = 10 KiB       |       0 | ee_block  = 0  |     
-  | i_blocks = 25         |         | ee_len    = 8  |      extent 94 
+  inode
+  +-----------------------+
+  | i_mode = IFDIR | 0644 |          block 93
+  | ei_block = 93     ----|------>  +----------------+
+  | i_size = 10 KiB       |       0 | ee_block  = 0  |
+  | i_blocks = 25         |         | ee_len    = 8  |      extent 94
   +-----------------------+         | ee_start  = 94 |---> +--------+
-                                    |----------------|     |        |     
+                                    |----------------|     |        |
                                   1 | ee_block  = 8  |     +--------+
                                     | ee_len    = 8  |      extent 99
-                                    | ee_start  = 99 |---> +--------+ 
+                                    | ee_start  = 99 |---> +--------+
                                     |----------------|     |        |
                                   2 | ee_block  = 16 |     +--------+
-                                    | ee_len    = 8  |      extent 66 
+                                    | ee_len    = 8  |      extent 66
                                     | ee_start  = 66 |---> +--------+
                                     |----------------|     |        |
                                     | ...            |     +--------+
-                                    |----------------|  
-                                341 | ee_block  = 0  | 
+                                    |----------------|
+                                341 | ee_block  = 0  |
                                     | ee_len    = 0  |
                                     | ee_start  = 0  |
                                     +----------------+
@@ -158,8 +163,8 @@ comprises three members:
 
 ```
 struct simplefs_extent
-  +----------------+                           
-  | ee_block =  0  |    
+  +----------------+
+  | ee_block =  0  |
   | ee_len   =  200|              extent
   | ee_start =  12 |-----------> +---------+
   +----------------+    block 12 |         |
@@ -181,7 +186,7 @@ The journaling support in simplefs is implemented using the jbd2 subsystem, whic
 
 For a detailed introduction to journaling, please refer to these two websites:
 [Journal(jbd2) document](https://www.kernel.org/doc/html/latest/filesystems/ext4/journal.html)
-[Journal(jbd2) api](https://docs.kernel.org/filesystems/journalling.html) 
+[Journal(jbd2) api](https://docs.kernel.org/filesystems/journalling.html)
 
 External journal device disk layout:
 
@@ -193,12 +198,12 @@ Hint:
 Each transaction starts with a descriptor block, followed by several metadata blocks or data blocks, and ends with a commit block. Every modified metadata (such as inode, bitmap, etc.) occupies its own block. Currently, simplefs primarily records "extent" metadata.
 
 
-How to Enable Journaling in simplefs: 
+How to Enable Journaling in simplefs:
 
 Step 1: Create the Journal Disk Image
 To create an 8MB disk image for the journal, use the following make command:
 
-Note: 
+Note:
 Assuming an 8 MB size for the external journal device, which is an arbitrary choice for now, I will set the journal block length to a fixed 2048, calculated by dividing the device size by the block size (4096 bytes).
 
 ```shell

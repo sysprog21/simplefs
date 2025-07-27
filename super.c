@@ -597,6 +597,7 @@ int simplefs_fill_super(struct super_block *sb, void *data, int silent)
 
         brelse(bh);
     }
+    bh = NULL;
 
     /* Allocate and copy bfree_bitmap */
     sbi->bfree_bitmap =
@@ -621,6 +622,7 @@ int simplefs_fill_super(struct super_block *sb, void *data, int silent)
         brelse(bh);
     }
 
+    bh = NULL;
     /* Create root inode */
     root_inode = simplefs_iget(sb, 1);
     if (IS_ERR(root_inode)) {

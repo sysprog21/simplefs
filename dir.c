@@ -19,7 +19,6 @@ static int simplefs_iterate(struct file *dir, struct dir_context *ctx)
     struct buffer_head *bh = NULL, *bh2 = NULL;
     struct simplefs_file_ei_block *eblock = NULL;
     struct simplefs_dir_block *dblock = NULL;
-    struct simplefs_file *f = NULL;
     int ei = 0, bi = 0, fi = 0;
     int ret = 0;
 
@@ -43,36 +42,62 @@ static int simplefs_iterate(struct file *dir, struct dir_context *ctx)
         return -EIO;
     eblock = (struct simplefs_file_ei_block *) bh->b_data;
 
-    ei = (ctx->pos - 2) / SIMPLEFS_FILES_PER_EXT;
-    bi = (ctx->pos - 2) % SIMPLEFS_FILES_PER_EXT / SIMPLEFS_FILES_PER_BLOCK;
-    fi = (ctx->pos - 2) % SIMPLEFS_FILES_PER_BLOCK;
+    if (ctx->pos - 2 == eblock->nr_files)
+        goto release_bh;
+
+    int remained_nr_files = eblock->nr_files - (ctx->pos - 2);
+
+    int offset = ctx->pos - 2;
+    for (ei = 0; ei < SIMPLEFS_MAX_EXTENTS; ei++) {
+        if (eblock->extents[ei].ee_start == 0)
+            continue;
+        if (offset > eblock->extents[ei].nr_files) {
+            offset -= eblock->extents[ei].nr_files;
+        } else {
+            break;
+        }
+    }
 
     /* Iterate over the index block and commit subfiles */
-    for (; ei < SIMPLEFS_MAX_EXTENTS; ei++) {
+    for (; remained_nr_files && ei < SIMPLEFS_MAX_EXTENTS; ei++) {
         if (eblock->extents[ei].ee_start == 0)
-            break;
+            continue;
 
         /* Iterate over blocks in one extent */
-        for (; bi < eblock->extents[ei].ee_len; bi++) {
+        for (bi = 0; bi < eblock->extents[ei].ee_len && remained_nr_files;
+             bi++) {
             bh2 = sb_bread(sb, eblock->extents[ei].ee_start + bi);
             if (!bh2) {
                 ret = -EIO;
                 goto release_bh;
             }
             dblock = (struct simplefs_dir_block *) bh2->b_data;
-            if (dblock->files[0].inode == 0) {
+
+            if (offset > dblock->nr_files) {
+                offset -= dblock->nr_files;
                 brelse(bh2);
                 bh2 = NULL;
-                break;
+                continue;
             }
-            /* Iterate every file in one block */
-            for (; fi < SIMPLEFS_FILES_PER_BLOCK; fi++) {
-                f = &dblock->files[fi];
-                if (f->inode &&
-                    !dir_emit(ctx, f->filename, SIMPLEFS_FILENAME_LEN, f->inode,
-                              DT_UNKNOWN))
-                    break;
-                ctx->pos++;
+
+            for (fi = 0; fi < SIMPLEFS_FILES_PER_BLOCK;) {
+                if (dblock->files[fi].inode != 0) {
+                    if (offset) {
+                        offset--;
+                    } else {
+                        remained_nr_files--;
+                        if (!dir_emit(ctx, dblock->files[fi].filename,
+                                      SIMPLEFS_FILENAME_LEN,
+                                      dblock->files[fi].inode, DT_UNKNOWN)) {
+                            brelse(bh2);
+                            bh2 = NULL;
+                            goto release_bh;
+                        }
+
+                        ctx->pos++;
+                    }
+                }
+                fi += dblock->files[fi].nr_blk;
             }
             brelse(bh2);
             bh2 = NULL;
