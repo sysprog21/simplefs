@@ -26,3 +26,13 @@ jobs:
             .ci/check-newline.sh
             .ci/check-format.sh
         shell: bash
+
+  mkfs_macos:
+    runs-on: macos-latest
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
+      - name: test mkfs.simplefs on macOS
+        run: |
+            .ci/test-mkfs-macos.sh
+        shell: bash
