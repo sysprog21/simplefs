@@ -1,5 +1,19 @@
+#if !defined(__linux__) && !defined(__APPLE__)
+#error \
+    "Do not manage to build this file unless your platform is Linux or macOS."
+#endif
+
 #include <fcntl.h>
-#include <linux/fs.h>
+#if defined(__linux__)
+#include <linux/fs.h> /* BLKGETSIZE64 */
+#elif defined(__APPLE__)
+#include <libkern/OSByteOrder.h>
+#include <sys/disk.h> /* DKIOCGETBLOCKCOUNT and DKIOCGETBLOCKSIZE */
+#define htole32(x) OSSwapHostToLittleInt32(x)
+#define le32toh(x) OSSwapLittleToHostInt32(x)
+#define htole64(x) OSSwapHostToLittleInt64(x)
+#define le64toh(x) OSSwapLittleToHostInt64(x)
+#endif
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -278,12 +292,31 @@ int main(int argc, char **argv)
     /* Get block device size */
     if ((stat_buf.st_mode & S_IFMT) == S_IFBLK) {
         long int blk_size = 0;
+#if defined(__linux__)
         ret = ioctl(fd, BLKGETSIZE64, &blk_size);
         if (ret != 0) {
             perror("BLKGETSIZE64:");
             ret = EXIT_FAILURE;
             goto fclose;
         }
+#elif defined(__APPLE__)
+        uint64_t block_count = 0;
+        uint32_t sector_size = 0;
+
+        ret = ioctl(fd, DKIOCGETBLOCKCOUNT, &block_count);
+        if (ret) {
+            perror("DKIOCGETBLOCKCOUNT");
+            ret = EXIT_FAILURE;
+            goto fclose;
+        }
+        ret = ioctl(fd, DKIOCGETBLOCKSIZE, &sector_size);
+        if (ret) {
+            perror("DKIOCGETBLOCKSIZE");
+            ret = EXIT_FAILURE;
+            goto fclose;
+        }
+        blk_size = block_count * sector_size;
+#endif
         stat_buf.st_size = blk_size;
     }
 
