@@ -153,21 +153,21 @@ static struct dentry *simplefs_lookup(struct inode *dir,
             }
 
             dblock = (struct simplefs_dir_block *) bh2->b_data;
-
+            int nr_files = dblock->nr_files;
             /* Search file in ei_block */
-            for (fi = 0; fi < dblock->nr_files;) {
+            for (fi = 0; nr_files && fi < SIMPLEFS_FILES_PER_BLOCK;) {
                 f = &dblock->files[fi];
-                if (!f->inode) {
-                    brelse(bh2);
-                    goto search_end;
+
+                if (f->inode) {
+                    nr_files--;
+                    if (!strncmp(f->filename, dentry->d_name.name,
+                                 SIMPLEFS_FILENAME_LEN)) {
+                        inode = simplefs_iget(sb, f->inode);
+                        brelse(bh2);
+                        goto search_end;
+                    }
                 }
-                if (!strncmp(f->filename, dentry->d_name.name,
-                             SIMPLEFS_FILENAME_LEN)) {
-                    inode = simplefs_iget(sb, f->inode);
-                    brelse(bh2);
-                    goto search_end;
-                }
-                fi += dblock->files[fi].nr_blk;
+                fi += f->nr_blk;
             }
             brelse(bh2);
             bh2 = NULL;
