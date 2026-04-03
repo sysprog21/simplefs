@@ -81,7 +81,7 @@ static int simplefs_iterate(struct file *dir, struct dir_context *ctx)
                 continue;
             }
 
-            for (fi = 0; fi < SIMPLEFS_FILES_PER_BLOCK;) {
+            for (fi = 0; fi < SIMPLEFS_FILES_PER_BLOCK && dblock->nr_files;) {
                 if (dblock->files[fi].inode != 0) {
                     if (offset) {
                         offset--;
