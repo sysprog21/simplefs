@@ -115,6 +115,9 @@ struct dentry *simplefs_mount(struct file_system_type *fs_type,
                               const char *dev_name,
                               void *data);
 
+/* hash.c */
+uint32_t simplefs_hash(struct dentry *dentry);
+
 /* file functions */
 extern const struct file_operations simplefs_file_ops;
 extern const struct file_operations simplefs_dir_ops;
