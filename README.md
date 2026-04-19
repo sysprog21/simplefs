@@ -97,7 +97,7 @@ named `ei_block`. This field, `ei_block`, serves different purposes depending
 on the type of file:
   - For a directory, it contains the list of files within that directory.
     A directory can hold a maximum of 40,920 files, with filenames restricted
-    to a maximum of 255 characters to ensure they fit within a single block.
+    to a maximum of 254 characters to ensure they fit within a single block.
   ```
   inode
   +-----------------------+
