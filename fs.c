@@ -1,11 +1,27 @@
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+#include "simplefs.h"
 
+#if SIMPLEFS_AT_LEAST(6, 18, 0)
+#include <linux/fs_context.h>
+#endif
 #include <linux/fs.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 
-#include "simplefs.h"
 
+#if SIMPLEFS_AT_LEAST(6, 18, 0)
+static int simplefs_get_tree(struct fs_context *fc)
+{
+	 return get_tree_bdev(fc, simplefs_fill_super);
+}
+static const struct fs_context_operations simplefs_context_ops = {
+	.get_tree	= simplefs_get_tree,
+};
+static int init_simplefs_context(struct fs_context *fc) {
+    fc->ops = &simplefs_context_ops;
+    return 0;
+}
+#else
 /* Mount a simplefs partition */
 struct dentry *simplefs_mount(struct file_system_type *fs_type,
                               int flags,
@@ -21,7 +37,7 @@ struct dentry *simplefs_mount(struct file_system_type *fs_type,
 
     return dentry;
 }
-
+#endif
 /* Unmount a simplefs partition */
 void simplefs_kill_sb(struct super_block *sb)
 {
@@ -41,7 +57,11 @@ void simplefs_kill_sb(struct super_block *sb)
 static struct file_system_type simplefs_file_system_type = {
     .owner = THIS_MODULE,
     .name = "simplefs",
+#if SIMPLEFS_AT_LEAST(6, 18, 0)
+    .init_fs_context = init_simplefs_context,
+#else
     .mount = simplefs_mount,
+#endif
     .kill_sb = simplefs_kill_sb,
     .fs_flags = FS_REQUIRES_DEV,
     .next = NULL,

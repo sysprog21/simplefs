@@ -13,7 +13,9 @@
 #include <linux/parser.h>
 
 #include "simplefs.h"
-
+#if SIMPLEFS_AT_LEAST(6, 18, 0)
+#include <linux/fs_context.h>
+#endif
 struct dentry *simplefs_mount(struct file_system_type *fs_type,
                               int flags,
                               const char *dev_name,
@@ -529,12 +531,17 @@ static struct super_operations simplefs_super_ops = {
 };
 
 /* Fill the struct superblock from partition superblock */
+#if SIMPLEFS_AT_LEAST(6, 18, 0)
+int simplefs_fill_super(struct super_block *sb, struct fs_context *fc)
+#else
 int simplefs_fill_super(struct super_block *sb, void *data, int silent)
+#endif
 {
     struct buffer_head *bh = NULL;
     struct simplefs_sb_info *csb = NULL;
     struct simplefs_sb_info *sbi = NULL;
     struct inode *root_inode = NULL;
+
     int ret = 0, i;
 
     /* Initialize the superblock */
@@ -643,14 +650,15 @@ int simplefs_fill_super(struct super_block *sb, void *data, int silent)
         ret = -ENOMEM;
         goto iput;
     }
-
+//Since parse_options is not available at fill_super stage at kernels v6.18+, it is disabled for now.
+#if SIMPLEFS_LESS_EQUAL(6, 17, 0)
     ret = simplefs_parse_options(sb, data);
     if (ret) {
         pr_err("simplefs_fill_super: Failed to parse options, error code: %d\n",
                ret);
         return ret;
     }
-
+#endif
     return 0;
 
 iput:
