@@ -650,7 +650,7 @@ int simplefs_fill_super(struct super_block *sb, void *data, int silent)
         ret = -ENOMEM;
         goto iput;
     }
-//Since parse_options is not available at fill_super stage at kernels v6.18+, it is disabled for now.
+/* Since parse_options is not available at fill_super stage at kernels v6.18+, it is disabled for now. */
 #if SIMPLEFS_LESS_EQUAL(6, 17, 0)
     ret = simplefs_parse_options(sb, data);
     if (ret) {
