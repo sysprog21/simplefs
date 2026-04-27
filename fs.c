@@ -12,12 +12,13 @@
 #if SIMPLEFS_AT_LEAST(6, 18, 0)
 static int simplefs_get_tree(struct fs_context *fc)
 {
-	 return get_tree_bdev(fc, simplefs_fill_super);
+    return get_tree_bdev(fc, simplefs_fill_super);
 }
 static const struct fs_context_operations simplefs_context_ops = {
-	.get_tree	= simplefs_get_tree,
+    .get_tree = simplefs_get_tree,
 };
-static int init_simplefs_context(struct fs_context *fc) {
+static int init_simplefs_context(struct fs_context *fc)
+{
     fc->ops = &simplefs_context_ops;
     return 0;
 }
