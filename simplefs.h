@@ -101,7 +101,11 @@ struct simplefs_dir_block {
 };
 
 /* superblock functions */
+#if SIMPLEFS_AT_LEAST(6, 18, 0)
+int simplefs_fill_super(struct super_block *sb, struct fs_context *fc);
+#else
 int simplefs_fill_super(struct super_block *sb, void *data, int silent);
+#endif
 void simplefs_kill_sb(struct super_block *sb);
 
 /* inode functions */

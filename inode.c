@@ -41,7 +41,15 @@ struct inode *simplefs_iget(struct super_block *sb, unsigned long ino)
         return ERR_PTR(-ENOMEM);
 
     /* If inode is in cache, return it */
+#if SIMPLEFS_AT_LEAST(6, 19, 0)
+    if (!(inode_state_read_once(inode) & I_NEW))
+/* inode->i_state is struct inode_state_flags in kernels v6.19 +,
+ * and inode_state_read_once returns __state from the state flag
+ * structure which is enum
+ */
+#else
     if (!(inode->i_state & I_NEW))
+#endif
         return inode;
 
     ci = SIMPLEFS_INODE(inode);
@@ -663,7 +671,7 @@ static int simplefs_unlink(struct inode *dir, struct dentry *dentry)
     if (S_ISLNK(inode->i_mode))
         goto clean_inode;
 
-        /* Update inode stats */
+    /* Update inode stats */
 #if SIMPLEFS_AT_LEAST(6, 7, 0)
     simple_inode_init_ts(dir);
 #elif SIMPLEFS_AT_LEAST(6, 6, 0)
@@ -907,7 +915,7 @@ static int simplefs_rename(struct inode *old_dir,
     if (ret != 0)
         goto release_new;
 
-        /* Update old parent inode metadata */
+    /* Update old parent inode metadata */
 #if SIMPLEFS_AT_LEAST(6, 7, 0)
     simple_inode_init_ts(old_dir);
 #elif SIMPLEFS_AT_LEAST(6, 6, 0)
