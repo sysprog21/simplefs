@@ -62,9 +62,10 @@ static int simplefs_iterate(struct file *dir, struct dir_context *ctx)
     for (; remained_nr_files && ei < SIMPLEFS_MAX_EXTENTS; ei++) {
         if (eblock->extents[ei].ee_start == 0)
             continue;
-
+        int ei_nr = eblock->extents[ei].nr_files;
         /* Iterate over blocks in one extent */
-        for (bi = 0; bi < eblock->extents[ei].ee_len && remained_nr_files;
+        for (bi = 0;
+             bi < eblock->extents[ei].ee_len && remained_nr_files && ei_nr;
              bi++) {
             bh2 = sb_bread(sb, eblock->extents[ei].ee_start + bi);
             if (!bh2) {
@@ -80,12 +81,13 @@ static int simplefs_iterate(struct file *dir, struct dir_context *ctx)
                 continue;
             }
 
-            for (fi = 0; fi < SIMPLEFS_FILES_PER_BLOCK;) {
+            for (fi = 0; fi < SIMPLEFS_FILES_PER_BLOCK && dblock->nr_files;) {
                 if (dblock->files[fi].inode != 0) {
                     if (offset) {
                         offset--;
                     } else {
                         remained_nr_files--;
+                        ei_nr--;
                         if (!dir_emit(ctx, dblock->files[fi].filename,
                                       SIMPLEFS_FILENAME_LEN,
                                       dblock->files[fi].inode, DT_UNKNOWN)) {
