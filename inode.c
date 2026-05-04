@@ -40,8 +40,16 @@ struct inode *simplefs_iget(struct super_block *sb, unsigned long ino)
     if (!inode)
         return ERR_PTR(-ENOMEM);
 
-    /* If inode is in cache, return it */
+        /* If inode is in cache, return it */
+#if SIMPLEFS_AT_LEAST(6, 19, 0)
+    if (!(inode_state_read_once(inode) & I_NEW))
+/* inode->i_state is struct inode_state_flags in kernels v6.19 +,
+ * and inode_state_read_once returns __state from the state flag
+ * structure which is enum
+ */
+#else
     if (!(inode->i_state & I_NEW))
+#endif
         return inode;
 
     ci = SIMPLEFS_INODE(inode);
