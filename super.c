@@ -477,7 +477,7 @@ int simplefs_parse_param(struct fs_context *fc, struct fs_parameter *param)
             return -ENOMEM;
         break;
     default:
-        return -EINVAL; 
+        return -EINVAL;
     }
     }
     return 0;
@@ -702,9 +702,9 @@ inode_init_owner(root_inode, NULL, root_inode->i_mode);
         struct path path;
         struct inode *inode;
         ret = kern_path(ctx->journal_path, LOOKUP_FOLLOW, &path);
-        if(ret) {
+        if (ret) {
             pr_err("simplefs_parse_options: kern_path failed with error %d\n",
-                  ret);
+                   ret);
             return ret;
         }
         inode = d_inode(path.dentry);

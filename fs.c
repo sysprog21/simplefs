@@ -27,7 +27,7 @@ static int init_simplefs_context(struct fs_context *fc)
         return -ENOMEM;
     fc->fs_private = ctx;
     fc->ops = &simplefs_context_ops;
-    
+
     return 0;
 }
 extern const struct fs_parameter_spec simplefs_param_specs;
