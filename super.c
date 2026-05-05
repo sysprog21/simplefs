@@ -690,7 +690,7 @@ inode_init_owner(root_inode, NULL, root_inode->i_mode);
 #if SIMPLEFS_AT_LEAST(6, 18, 0)
     if (ctx->journal_dev) {
         ret = simplefs_load_journal(sb, ctx->journal_dev);
-        if(ret) {
+        if (ret) {
             pr_err(
                 "simplefs_parse_options: simplefs_load_journal failed with "
                 "%d\n",
