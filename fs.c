@@ -15,7 +15,8 @@ static int simplefs_get_tree(struct fs_context *fc)
 {
     return get_tree_bdev(fc, simplefs_fill_super);
 }
-static void simplefs_free_context(struct fs_context *fc) {
+static void simplefs_free_context(struct fs_context *fc)
+{
     struct simplefs_fs_context *ctx = fc->fs_private;
 
     if (!ctx)
