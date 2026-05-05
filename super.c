@@ -15,6 +15,7 @@
 #include "simplefs.h"
 #if SIMPLEFS_AT_LEAST(6, 18, 0)
 #include <linux/fs_context.h>
+#include <linux/fs_parser.h>
 #endif
 struct dentry *simplefs_mount(struct file_system_type *fs_type,
                               int flags,
@@ -449,6 +450,40 @@ static const match_table_t tokens = {
     {SIMPLEFS_OPT_JOURNAL_DEV, "journal_dev=%u"},
     {SIMPLEFS_OPT_JOURNAL_PATH, "journal_path=%s"},
 };
+#if SIMPLEFS_AT_LEAST(6, 18, 0)
+const struct fs_parameter_spec simplefs_param_specs[] = {
+    fsparam_u32("journal_dev", SIMPLEFS_OPT_JOURNAL_DEV),
+    fsparam_string("journal_path", SIMPLEFS_OPT_JOURNAL_PATH),
+    {}
+};
+int simplefs_parse_param(struct fs_context *fc, struct fs_parameter *param)
+{
+    struct simplefs_fs_context *ctx = fc->fs_private;
+    struct fs_parse_result result;
+    int opt;
+    
+    opt = fs_parse(fc, simplefs_param_specs, param, &result);
+    if (opt < 0)
+        return opt;
+    
+    switch (opt) {
+    case SIMPLEFS_OPT_JOURNAL_DEV:
+        ctx->journal_dev = result.uint_32;
+        break;
+
+    case SIMPLEFS_OPT_JOURNAL_PATH: {
+        kfree(ctx->journal_path);
+        ctx->journal_path = kstrdup(param->string, GFP_KERNEL);
+        if(!ctx->journal_path)
+            return -ENOMEM;
+        break;
+    default:
+        return -EINVAL;    
+    }
+    }
+    return 0;
+}
+#else
 static int simplefs_parse_options(struct super_block *sb, char *options)
 {
     substring_t args[MAX_OPT_ARGS];
@@ -520,7 +555,7 @@ static int simplefs_parse_options(struct super_block *sb, char *options)
 
     return 0;
 }
-
+#endif
 static struct super_operations simplefs_super_ops = {
     .put_super = simplefs_put_super,
     .alloc_inode = simplefs_alloc_inode,
@@ -534,6 +569,7 @@ static struct super_operations simplefs_super_ops = {
 #if SIMPLEFS_AT_LEAST(6, 18, 0)
 int simplefs_fill_super(struct super_block *sb, struct fs_context *fc)
 {
+    struct simplefs_fs_context *ctx = fc->fs_private;
 #else
 int simplefs_fill_super(struct super_block *sb, void *data, int silent)
 {
@@ -651,9 +687,42 @@ inode_init_owner(root_inode, NULL, root_inode->i_mode);
         ret = -ENOMEM;
         goto iput;
     }
-    /* Since parse_options is not available at fill_super stage at kernels
-     * v6.18+, it is disabled for now. */
-#if SIMPLEFS_LESS_EQUAL(6, 17, 0)
+
+#if SIMPLEFS_AT_LEAST(6, 18, 0)
+    if(ctx->journal_dev) {
+        ret = simplefs_load_journal(sb, ctx->journal_dev);
+        if(ret) {
+            pr_err(
+                "simplefs_parse_options: simplefs_load_journal failed with "
+                "%d\n",
+                ret);
+            return ret;
+        }
+    }
+    if(ctx->journal_path) {
+        struct path path;
+        struct inode *inode;
+        ret = kern_path(ctx->journal_path, LOOKUP_FOLLOW, &path);
+        if(ret) {
+            pr_err(
+                "simplefs_parse_options: kern_path failed with error %d\n",
+                ret);
+            return ret;
+        }
+        inode = d_inode(path.dentry);
+        if(S_ISBLK(inode->i_mode)) {
+            unsigned long journal_devnum = 
+                new_encode_dev(inode->i_rdev);
+            if((ret = simplefs_load_journal(sb, journal_devnum))) {
+                pr_err(
+                    "simplefs_parse_options: simplefs_load_journal failed "
+                    "with %d\n",
+                    ret);
+                return ret;
+            }
+        }
+    }
+#else
     ret = simplefs_parse_options(sb, data);
     if (ret) {
         pr_err("simplefs_fill_super: Failed to parse options, error code: %d\n",
