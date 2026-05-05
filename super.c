@@ -530,12 +530,9 @@ static int simplefs_parse_options(struct super_block *sb, char *options)
                 kfree(journal_path);
                 return ret;
             }
-
-            journal_inode = path.dentry->d_inode;
-
-            path_put(&path);
             kfree(journal_path);
 
+            journal_inode = path.dentry->d_inode;
             if (S_ISBLK(journal_inode->i_mode)) {
                 unsigned long journal_devnum =
                     new_encode_dev(journal_inode->i_rdev);
@@ -547,6 +544,7 @@ static int simplefs_parse_options(struct super_block *sb, char *options)
                     return ret;
                 }
             }
+            path_put(&path);
             break;
         }
         }
