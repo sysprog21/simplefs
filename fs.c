@@ -23,7 +23,7 @@ static int init_simplefs_context(struct fs_context *fc)
 {
     struct simplefs_fs_context *ctx;
     ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
-    if(!ctx)
+    if (!ctx)
         return -ENOMEM;
     fc->fs_private = ctx;
     fc->ops = &simplefs_context_ops;

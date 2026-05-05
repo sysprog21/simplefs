@@ -113,8 +113,8 @@ int simplefs_fill_super(struct super_block *sb, void *data, int silent);
 #endif
 void simplefs_kill_sb(struct super_block *sb);
 #if SIMPLEFS_AT_LEAST(6, 18, 0)
-#include <linux/parser.h>
 #include <linux/fs_context.h>
+#include <linux/parser.h>
 int simplefs_parse_param(struct fs_context *fc, struct fs_parameter *param);
 #endif
 /* inode functions */

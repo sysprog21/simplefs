@@ -454,18 +454,17 @@ static const match_table_t tokens = {
 const struct fs_parameter_spec simplefs_param_specs[] = {
     fsparam_u32("journal_dev", SIMPLEFS_OPT_JOURNAL_DEV),
     fsparam_string("journal_path", SIMPLEFS_OPT_JOURNAL_PATH),
-    {}
-};
+    {}};
 int simplefs_parse_param(struct fs_context *fc, struct fs_parameter *param)
 {
     struct simplefs_fs_context *ctx = fc->fs_private;
     struct fs_parse_result result;
     int opt;
-    
+
     opt = fs_parse(fc, simplefs_param_specs, param, &result);
     if (opt < 0)
         return opt;
-    
+
     switch (opt) {
     case SIMPLEFS_OPT_JOURNAL_DEV:
         ctx->journal_dev = result.uint_32;
@@ -474,11 +473,11 @@ int simplefs_parse_param(struct fs_context *fc, struct fs_parameter *param)
     case SIMPLEFS_OPT_JOURNAL_PATH: {
         kfree(ctx->journal_path);
         ctx->journal_path = kstrdup(param->string, GFP_KERNEL);
-        if(!ctx->journal_path)
+        if (!ctx->journal_path)
             return -ENOMEM;
         break;
     default:
-        return -EINVAL;    
+        return -EINVAL; 
     }
     }
     return 0;
@@ -689,7 +688,7 @@ inode_init_owner(root_inode, NULL, root_inode->i_mode);
     }
 
 #if SIMPLEFS_AT_LEAST(6, 18, 0)
-    if(ctx->journal_dev) {
+    if (ctx->journal_dev) {
         ret = simplefs_load_journal(sb, ctx->journal_dev);
         if(ret) {
             pr_err(
@@ -699,21 +698,19 @@ inode_init_owner(root_inode, NULL, root_inode->i_mode);
             return ret;
         }
     }
-    if(ctx->journal_path) {
+    if (ctx->journal_path) {
         struct path path;
         struct inode *inode;
         ret = kern_path(ctx->journal_path, LOOKUP_FOLLOW, &path);
         if(ret) {
-            pr_err(
-                "simplefs_parse_options: kern_path failed with error %d\n",
-                ret);
+            pr_err("simplefs_parse_options: kern_path failed with error %d\n",
+                  ret);
             return ret;
         }
         inode = d_inode(path.dentry);
-        if(S_ISBLK(inode->i_mode)) {
-            unsigned long journal_devnum = 
-                new_encode_dev(inode->i_rdev);
-            if((ret = simplefs_load_journal(sb, journal_devnum))) {
+        if (S_ISBLK(inode->i_mode)) {
+            unsigned long journal_devnum = new_encode_dev(inode->i_rdev);
+            if ((ret = simplefs_load_journal(sb, journal_devnum))) {
                 pr_err(
                     "simplefs_parse_options: simplefs_load_journal failed "
                     "with %d\n",
