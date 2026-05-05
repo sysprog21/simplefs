@@ -708,6 +708,7 @@ inode_init_owner(root_inode, NULL, root_inode->i_mode);
             return ret;
         }
         inode = d_inode(path.dentry);
+        path_put(&path);
         if (S_ISBLK(inode->i_mode)) {
             unsigned long journal_devnum = new_encode_dev(inode->i_rdev);
             if ((ret = simplefs_load_journal(sb, journal_devnum))) {

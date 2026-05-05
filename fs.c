@@ -3,7 +3,7 @@
 
 #if SIMPLEFS_AT_LEAST(6, 18, 0)
 #include <linux/fs_context.h>
-#include <linux/parser.h>
+#include <linux/fs_parser.h>
 #endif
 #include <linux/fs.h>
 #include <linux/kernel.h>
@@ -15,9 +15,19 @@ static int simplefs_get_tree(struct fs_context *fc)
 {
     return get_tree_bdev(fc, simplefs_fill_super);
 }
+static void simplefs_free_context(struct fs_context *fc) {
+    struct simplefs_fs_context *ctx = fc->fs_private;
+
+    if (!ctx)
+        return;
+
+    kfree(ctx->journal_path);
+    kfree(ctx);
+}
 static const struct fs_context_operations simplefs_context_ops = {
     .get_tree = simplefs_get_tree,
     .parse_param = simplefs_parse_param,
+    .free = simplefs_free_context,
 };
 static int init_simplefs_context(struct fs_context *fc)
 {
