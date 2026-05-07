@@ -99,7 +99,12 @@ struct simplefs_dir_block {
     uint32_t nr_files;
     struct simplefs_file files[SIMPLEFS_FILES_PER_BLOCK];
 };
-
+#if SIMPLEFS_AT_LEAST(6, 18, 0)
+struct simplefs_fs_context {
+    u32 journal_dev;
+    char *journal_path;
+};
+#endif
 /* superblock functions */
 #if SIMPLEFS_AT_LEAST(6, 18, 0)
 int simplefs_fill_super(struct super_block *sb, struct fs_context *fc);
@@ -107,7 +112,11 @@ int simplefs_fill_super(struct super_block *sb, struct fs_context *fc);
 int simplefs_fill_super(struct super_block *sb, void *data, int silent);
 #endif
 void simplefs_kill_sb(struct super_block *sb);
-
+#if SIMPLEFS_AT_LEAST(6, 18, 0)
+#include <linux/fs_context.h>
+#include <linux/fs_parser.h>
+int simplefs_parse_param(struct fs_context *fc, struct fs_parameter *param);
+#endif
 /* inode functions */
 int simplefs_init_inode_cache(void);
 void simplefs_destroy_inode_cache(void);

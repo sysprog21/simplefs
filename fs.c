@@ -3,6 +3,7 @@
 
 #if SIMPLEFS_AT_LEAST(6, 18, 0)
 #include <linux/fs_context.h>
+#include <linux/fs_parser.h>
 #endif
 #include <linux/fs.h>
 #include <linux/kernel.h>
@@ -14,14 +15,33 @@ static int simplefs_get_tree(struct fs_context *fc)
 {
     return get_tree_bdev(fc, simplefs_fill_super);
 }
+static void simplefs_free_context(struct fs_context *fc)
+{
+    struct simplefs_fs_context *ctx = fc->fs_private;
+
+    if (!ctx)
+        return;
+
+    kfree(ctx->journal_path);
+    kfree(ctx);
+}
 static const struct fs_context_operations simplefs_context_ops = {
     .get_tree = simplefs_get_tree,
+    .parse_param = simplefs_parse_param,
+    .free = simplefs_free_context,
 };
 static int init_simplefs_context(struct fs_context *fc)
 {
+    struct simplefs_fs_context *ctx;
+    ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
+    if (!ctx)
+        return -ENOMEM;
+    fc->fs_private = ctx;
     fc->ops = &simplefs_context_ops;
+
     return 0;
 }
+extern const struct fs_parameter_spec simplefs_param_specs;
 #else
 /* Mount a simplefs partition */
 struct dentry *simplefs_mount(struct file_system_type *fs_type,
@@ -60,6 +80,7 @@ static struct file_system_type simplefs_file_system_type = {
     .name = "simplefs",
 #if SIMPLEFS_AT_LEAST(6, 18, 0)
     .init_fs_context = init_simplefs_context,
+    .parameters = &simplefs_param_specs,
 #else
     .mount = simplefs_mount,
 #endif
