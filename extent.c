@@ -64,9 +64,10 @@ uint32_t simplefs_ext_search(struct simplefs_file_ei_block *index,
      */
     end_block = index->extents[end].ee_block;
     end_len = index->extents[end].ee_len;
-    if (iblock >= end_block && iblock < end_len)
+
+    if (iblock >= end_block && iblock < end_block + end_len)
         return end;
     if (boundary < SIMPLEFS_MAX_EXTENTS)
         return boundary;
-    return boundary;
+    return -1;
 }
