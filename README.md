@@ -33,6 +33,9 @@ You can build the kernel module and tool with `make`.
 Generate test image via `make test.img`, which creates a zeroed file of 50 MiB.
 
 You can then mount this image on a system with the simplefs kernel module installed.
+As many computers now have UEFI Secure Boot enabled, you can either disable Secure Boot
+or sign the kernel module. To sign the module, refer to [secure-boot-signing-guide.md](./secure-boot-signing-guide.md).
+
 Let's test kernel module:
 ```shell
 $ sudo insmod simplefs.ko
