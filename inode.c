@@ -186,11 +186,12 @@ static int __file_lookup(struct inode *dir,
                     *fi = _fi;
                     return 0;
                 }
-                if(!dblock->files[_fi].nr_blk){
+                if(!dblock->files[_fi].nr_blk) {
                     /*
-                    this means the _ei and _bi we're looking for is looking at an empty block.
-                    we have to advance nontheless, but nr_blk would just add 0 to fi, causing endless loop.
-                    so we skip this entry by 1, just in case.
+                    this means the _ei and _bi we're looking for is looking at 
+                    an empty block. we have to advance nontheless, but nr_blk
+                    would just add 0 to fi, causing endless loop. so we skip
+                    this entry by 1, just in case.
                     */
                     _fi += 1;
                 }
