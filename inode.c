@@ -186,7 +186,16 @@ static int __file_lookup(struct inode *dir,
                     *fi = _fi;
                     return 0;
                 }
-                _fi += dblock->files[_fi].nr_blk;
+
+                if (!dblock->files[_fi].nr_blk) {
+                    /*
+                    this means the _ei and _bi we're looking for is looking at
+                    an empty block, which means the filesystem is corrupted.
+                    */
+                    return -EUCLEAN;
+                } else {
+                    _fi += dblock->files[_fi].nr_blk;
+                }
             }
             RELEASE_BUFFER_HEAD(*ret_bi_bh);
         }
