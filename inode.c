@@ -430,6 +430,7 @@ static int simplefs_get_new_ext(struct super_block *sb,
         dblock = (struct simplefs_dir_block *) bh->b_data;
         memset(dblock, 0, sizeof(struct simplefs_dir_block));
         dblock->files[0].nr_blk = SIMPLEFS_FILES_PER_BLOCK;
+        mark_buffer_dirty(bh);
         RELEASE_BUFFER_HEAD(bh);
     }
     return 0;
