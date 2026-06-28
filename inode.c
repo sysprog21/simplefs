@@ -156,16 +156,17 @@ static int __file_lookup(struct inode *dir,
     _ei = hash_code / SIMPLEFS_MAX_BLOCKS_PER_EXTENT;
     _bi = hash_code % SIMPLEFS_MAX_BLOCKS_PER_EXTENT;
     int nr_ei_files = eblock->nr_files;
-    for (idx_ei = 0; nr_ei_files; _ei++, idx_ei++) {
+    for (idx_ei = 0; nr_ei_files && idx_ei < SIMPLEFS_MAX_EXTENTS;
+         _ei++, idx_ei++) {
         CHECK_AND_SET_RING_INDEX(_ei, SIMPLEFS_MAX_EXTENTS);
 
         if (!eblock->extents[_ei].ee_start)
             continue;
 
-        nr_ei_files -= eblock->extents[_ei].nr_files;
         /* Iterate blocks in extent */
         int nr_bi_files = eblock->extents[_ei].nr_files;
-        for (idx_bi = 0; nr_bi_files; _bi++, idx_bi++) {
+        for (idx_bi = 0; nr_bi_files && idx_bi < eblock->extents[_ei].ee_len;
+             _bi++, idx_bi++) {
             CHECK_AND_SET_RING_INDEX(_bi, eblock->extents[_ei].ee_len);
 
             *ret_bi_bh = sb_bread(sb, eblock->extents[_ei].ee_start + _bi);
@@ -176,7 +177,10 @@ static int __file_lookup(struct inode *dir,
 
             dblock = (struct simplefs_dir_block *) (*ret_bi_bh)->b_data;
             /* Search file in ei_block */
-            nr_bi_files -= dblock->nr_files;
+            if (dblock->nr_files == 0) {
+                RELEASE_BUFFER_HEAD(*ret_bi_bh);
+                continue;
+            }
             for (_fi = 0; _fi < SIMPLEFS_FILES_PER_BLOCK;) {
                 f = &dblock->files[_fi];
                 if (f->inode && !strncmp(f->filename, dentry->d_name.name,
@@ -188,8 +192,10 @@ static int __file_lookup(struct inode *dir,
                 }
                 _fi += dblock->files[_fi].nr_blk;
             }
+            nr_bi_files -= dblock->nr_files;
             RELEASE_BUFFER_HEAD(*ret_bi_bh);
         }
+        nr_ei_files -= eblock->extents[_ei].nr_files;
         _bi = 0;
     }
 file_search_end:
@@ -468,9 +474,8 @@ static bool simplefs_try_remove_entry(struct simplefs_dir_block *dblock,
                                       const char *name)
 {
     int fi, i;
-    int blk_nr_files = dblock->nr_files;
 
-    for (fi = 0; blk_nr_files && fi < SIMPLEFS_FILES_PER_BLOCK;) {
+    for (fi = 0; fi < SIMPLEFS_FILES_PER_BLOCK;) {
         if (dblock->files[fi].inode) {
             if (dblock->files[fi].inode == ino &&
                 !strcmp(dblock->files[fi].filename, name)) {
@@ -479,6 +484,7 @@ static bool simplefs_try_remove_entry(struct simplefs_dir_block *dblock,
                 for (i = fi - 1; i >= 0; i--) {
                     if (dblock->files[i].inode != 0 || i == 0) {
                         dblock->files[i].nr_blk += dblock->files[fi].nr_blk;
+                        dblock->files[fi].nr_blk = 0;
                         break;
                     }
                 }
@@ -487,7 +493,6 @@ static bool simplefs_try_remove_entry(struct simplefs_dir_block *dblock,
                 eblock->nr_files--;
                 return true;
             }
-            blk_nr_files--;
         }
         fi += dblock->files[fi].nr_blk;
     }
@@ -672,7 +677,7 @@ static int simplefs_remove_from_dir(struct inode *dir,
     struct buffer_head *bh2 = NULL;
     struct simplefs_file_ei_block *eblock = NULL;
     struct simplefs_dir_block *dirblk = NULL;
-    int ei = 0, bi = 0, idx_bi;
+    int ei = 0, bi = 0, idx_ei, idx_bi;
     int ret = 0, found = false, dir_nr_files;
     uint32_t hash_code;
     /* Read parent directory index */
@@ -688,13 +693,15 @@ static int simplefs_remove_from_dir(struct inode *dir,
     ei = hash_code / SIMPLEFS_MAX_BLOCKS_PER_EXTENT;
     bi = hash_code % SIMPLEFS_MAX_BLOCKS_PER_EXTENT;
 
-    for (; dir_nr_files; ei++) {
+    for (idx_ei = 0; dir_nr_files && idx_ei < SIMPLEFS_MAX_EXTENTS;
+         ei++, idx_ei++) {
         CHECK_AND_SET_RING_INDEX(ei, SIMPLEFS_MAX_EXTENTS);
 
         if (eblock->extents[ei].ee_start) {
-            dir_nr_files -= eblock->extents[ei].nr_files;
+            int nr_bi_files = eblock->extents[ei].nr_files;
+            dir_nr_files -= nr_bi_files;
             /* simplefs_extent */
-            for (idx_bi = 0; idx_bi < eblock->extents[ei].ee_len;
+            for (idx_bi = 0; nr_bi_files && idx_bi < eblock->extents[ei].ee_len;
                  bi++, idx_bi++) {
                 CHECK_AND_SET_RING_INDEX(bi, eblock->extents[ei].ee_len);
                 bh2 = sb_bread(sb, eblock->extents[ei].ee_start + bi);
@@ -704,6 +711,10 @@ static int simplefs_remove_from_dir(struct inode *dir,
                 }
                 /* simplefs_dir_block */
                 dirblk = (struct simplefs_dir_block *) bh2->b_data;
+                if (dirblk->nr_files == 0) {
+                    RELEASE_BUFFER_HEAD(bh2);
+                    continue;
+                }
                 if (simplefs_try_remove_entry(dirblk, eblock, ei, inode->i_ino,
                                               dentry->d_name.name)) {
                     mark_buffer_dirty(bh2);
@@ -712,6 +723,7 @@ static int simplefs_remove_from_dir(struct inode *dir,
                     *ret_ei = ei;
                     goto found_data;
                 }
+                nr_bi_files -= dirblk->nr_files;
                 RELEASE_BUFFER_HEAD(bh2);
             }
         }
