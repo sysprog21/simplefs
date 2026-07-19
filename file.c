@@ -63,6 +63,7 @@ static int simplefs_file_get_block(struct inode *inode,
             extent ? index->extents[extent - 1].ee_block +
                          index->extents[extent - 1].ee_len
                    : 0;
+        mark_buffer_dirty(bh_index);
     } else {
         bno = index->extents[extent].ee_start + iblock -
               index->extents[extent].ee_block;
