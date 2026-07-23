@@ -100,7 +100,7 @@ static int simplefs_write_inode(struct inode *inode,
 
 #if SIMPLEFS_AT_LEAST(6, 7, 0)
     disk_inode->i_atime = inode_get_atime_sec(inode);
-    disk_inode->i_atime = inode_get_mtime_sec(inode);
+    disk_inode->i_mtime = inode_get_mtime_sec(inode);
 #else
     disk_inode->i_atime = inode->i_atime.tv_sec;
     disk_inode->i_mtime = inode->i_mtime.tv_sec;
