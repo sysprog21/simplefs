@@ -265,7 +265,12 @@ static journal_t *simplefs_get_dev_journal(struct super_block *sb,
     unsigned long offset;
     journal_t *journal;
     int errno = 0;
-#if SIMPLEFS_AT_LEAST(6, 9, 0)
+#if SIMPLEFS_AT_LEAST(7, 3, 0)
+    struct file *bdev_file;
+    bdev_file = fs_bdev_file_open_by_dev(
+        journal_dev, BLK_OPEN_READ | BLK_OPEN_WRITE | BLK_OPEN_RESTRICT_WRITES,
+        sb, sb);
+#elif SIMPLEFS_AT_LEAST(6, 9, 0)
     struct file *bdev_file;
     bdev_file = bdev_file_open_by_dev(
         journal_dev, BLK_OPEN_READ | BLK_OPEN_WRITE | BLK_OPEN_RESTRICT_WRITES,
@@ -385,7 +390,9 @@ static journal_t *simplefs_get_dev_journal(struct super_block *sb,
     return journal;
 
 out_bdev:
-#if SIMPLEFS_AT_LEAST(6, 9, 0)
+#if SIMPLEFS_AT_LEAST(7, 3, 0)
+    fs_bdev_file_release(bdev_file, sb);
+#elif SIMPLEFS_AT_LEAST(6, 9, 0)
     fput(bdev_file);
 #elif SIMPLEFS_AT_LEAST(6, 7, 0)
     bdev_release(bdev_handle);
