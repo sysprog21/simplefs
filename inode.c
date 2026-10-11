@@ -500,7 +500,12 @@ static bool simplefs_try_remove_entry(struct simplefs_dir_block *dblock,
  *   - cleanup index block of the new inode
  *   - add new file/directory in parent index
  */
-#if SIMPLEFS_AT_LEAST(6, 3, 0)
+#if SIMPLEFS_AT_LEAST(7, 3, 0)
+static int simplefs_create(struct mnt_idmap *id,
+                           struct inode *dir,
+                           struct dentry *dentry,
+                           umode_t mode)
+#elif SIMPLEFS_AT_LEAST(6, 3, 0)
 static int simplefs_create(struct mnt_idmap *id,
                            struct inode *dir,
                            struct dentry *dentry,
@@ -1070,8 +1075,16 @@ release_new:
     RELEASE_BUFFER_HEAD(src_bi_bh);
     return ret;
 }
-
-#if SIMPLEFS_AT_LEAST(6, 15, 0)
+#if SIMPLEFS_AT_LEAST(7, 3, 0)
+static struct dentry *simplefs_mkdir(struct mnt_idmap *id,
+                                     struct inode *dir,
+                                     struct dentry *dentry,
+                                     umode_t mode)
+{
+    int ret = simplefs_create(id, dir, dentry, mode | S_IFDIR);
+    return ret ? ERR_PTR(ret) : NULL;
+}
+#elif SIMPLEFS_AT_LEAST(6, 15, 0)
 static struct dentry *simplefs_mkdir(struct mnt_idmap *id,
                                      struct inode *dir,
                                      struct dentry *dentry,
