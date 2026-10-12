@@ -96,7 +96,8 @@ static int simplefs_readpage(struct file *file, struct page *page)
 /* Called by the page cache to write a dirty page to the physical disk (when
  * sync is called or when memory is needed).
  */
-#if SIMPLEFS_AT_LEAST(6, 8, 0)
+#if SIMPLEFS_AT_LEAST(6, 16, 0)
+#elif SIMPLEFS_AT_LEAST(6, 8, 0)
 static int simplefs_writepage(struct page *page, struct writeback_control *wbc)
 {
     struct folio *folio = page_folio(page);
