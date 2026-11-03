@@ -138,16 +138,23 @@ static void simplefs_put_super(struct super_block *sb)
     if (sbi->s_journal_bdev_file) {
         sync_blockdev(file_bdev(sbi->s_journal_bdev_file));
         invalidate_bdev(file_bdev(sbi->s_journal_bdev_file));
+#if SIMPLEFS_AT_LEAST(7, 3, 0)
+        fs_bdev_file_release(sbi->s_journal_bdev_file, sb);
+#else
+        fput(sbi->s_journal_bdev_file);
+#endif
     }
 #elif SIMPLEFS_AT_LEAST(6, 7, 0)
     if (sbi->s_journal_bdev_handle) {
         sync_blockdev(sbi->s_journal_bdev_handle->bdev);
         invalidate_bdev(sbi->s_journal_bdev_handle->bdev);
+        bdev_release(sbi->s_journal_bdev_handle);
     }
 #elif SIMPLEFS_AT_LEAST(6, 6, 0)
     if (sbi->s_journal_bdev) {
         sync_blockdev(sbi->s_journal_bdev);
         invalidate_bdev(sbi->s_journal_bdev);
+        blkdev_put(sbi->s_journal_bdev, sb);
     }
 #elif SIMPLEFS_AT_LEAST(6, 5, 0)
     if (sbi->s_journal_bdev) {
@@ -165,11 +172,9 @@ static void simplefs_put_super(struct super_block *sb)
     }
 #endif
 
-    if (sbi) {
-        kfree(sbi->ifree_bitmap);
-        kfree(sbi->bfree_bitmap);
-        kfree(sbi);
-    }
+    kfree(sbi->ifree_bitmap);
+    kfree(sbi->bfree_bitmap);
+    kfree(sbi);
 }
 
 static int simplefs_sync_fs(struct super_block *sb, int wait)
@@ -401,7 +406,7 @@ out_bdev:
 #elif SIMPLEFS_AT_LEAST(5, 10, 0)
     blkdev_put(bdev, FMODE_READ | FMODE_WRITE | FMODE_EXCL);
 #endif
-    return NULL;
+    return ERR_PTR(errno);
 }
 
 static int simplefs_load_journal(struct super_block *sb,
@@ -493,7 +498,7 @@ int simplefs_parse_param(struct fs_context *fc, struct fs_parameter *param)
 static int simplefs_parse_options(struct super_block *sb, char *options)
 {
     substring_t args[MAX_OPT_ARGS];
-    int token, ret = 0, arg;
+    int token, ret = 0, arg = 0;
     char *p;
     char *journal_path;
     struct inode *journal_inode;
@@ -512,7 +517,7 @@ static int simplefs_parse_options(struct super_block *sb, char *options)
         case SIMPLEFS_OPT_JOURNAL_DEV:
             if (args->from && match_int(args, &arg)) {
                 pr_err("simplefs_parse_options: match_int failed\n");
-                return 1;
+                return -EINVAL;
             }
             if ((ret = simplefs_load_journal(sb, arg))) {
                 pr_err(
@@ -543,15 +548,16 @@ static int simplefs_parse_options(struct super_block *sb, char *options)
             if (S_ISBLK(journal_inode->i_mode)) {
                 unsigned long journal_devnum =
                     new_encode_dev(journal_inode->i_rdev);
-                if ((ret = simplefs_load_journal(sb, journal_devnum))) {
-                    pr_err(
-                        "simplefs_parse_options: simplefs_load_journal failed "
-                        "with %d\n",
-                        ret);
-                    return ret;
-                }
+                ret = simplefs_load_journal(sb, journal_devnum);
             }
             path_put(&path);
+            if (ret) {
+                pr_err(
+                    "simplefs_parse_options: simplefs_load_journal failed "
+                    "with %d\n",
+                    ret);
+                return ret;
+            }
             break;
         }
         }
@@ -622,6 +628,7 @@ int simplefs_fill_super(struct super_block *sb, void *data, int silent)
     sb->s_fs_info = sbi;
 
     brelse(bh);
+    bh = NULL;
 
     /* Allocate and copy ifree_bitmap */
     sbi->ifree_bitmap =
@@ -689,7 +696,7 @@ inode_init_owner(root_inode, NULL, root_inode->i_mode);
     sb->s_root = d_make_root(root_inode);
     if (!sb->s_root) {
         ret = -ENOMEM;
-        goto iput;
+        goto free_bfree;
     }
 
 #if SIMPLEFS_AT_LEAST(6, 18, 0)
@@ -705,24 +712,22 @@ inode_init_owner(root_inode, NULL, root_inode->i_mode);
     }
     if (ctx->journal_path) {
         struct path path;
-        struct inode *inode;
         ret = kern_path(ctx->journal_path, LOOKUP_FOLLOW, &path);
         if (ret) {
             pr_err("simplefs_parse_options: kern_path failed with error %d\n",
                    ret);
             return ret;
         }
-        inode = d_inode(path.dentry);
+        if (S_ISBLK(d_inode(path.dentry)->i_mode))
+            ret = simplefs_load_journal(
+                sb, new_encode_dev(d_inode(path.dentry)->i_rdev));
         path_put(&path);
-        if (S_ISBLK(inode->i_mode)) {
-            unsigned long journal_devnum = new_encode_dev(inode->i_rdev);
-            if ((ret = simplefs_load_journal(sb, journal_devnum))) {
-                pr_err(
-                    "simplefs_parse_options: simplefs_load_journal failed "
-                    "with %d\n",
-                    ret);
-                return ret;
-            }
+        if (ret) {
+            pr_err(
+                "simplefs_parse_options: simplefs_load_journal failed with "
+                "%d\n",
+                ret);
+            return ret;
         }
     }
 #else
@@ -735,14 +740,13 @@ inode_init_owner(root_inode, NULL, root_inode->i_mode);
 #endif
     return 0;
 
-iput:
-    iput(root_inode);
 free_bfree:
     kfree(sbi->bfree_bitmap);
 free_ifree:
     kfree(sbi->ifree_bitmap);
 free_sbi:
     kfree(sbi);
+    sb->s_fs_info = NULL;
 release:
     brelse(bh);
 
