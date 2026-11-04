@@ -1,7 +1,10 @@
 # file too large
 test_too_large_file() {
     TESTLG_FILE_SZ=$(( $MAXFILESIZE / 1024 / 1024 + 1 ))
-    test_op "dd if=/dev/zero of=exceed_max_sz_file bs=1M count=$TESTLG_FILE_SZ status=none"
+    # writing past the limit must fail with EFBIG, not succeed or spin
+    if sudo sh -c "dd if=/dev/zero of=exceed_max_sz_file bs=1M count=$TESTLG_FILE_SZ status=none" 2>/dev/null; then
+        echo "Failed, write over the size limit succeeded"
+    fi
     echo
     filesize=$(sudo ls -lR  | grep -e "$F_MOD 1".*file | awk '{print $5}')
     test $filesize -le $MAXFILESIZE || echo "Failed, file size over the limit"
