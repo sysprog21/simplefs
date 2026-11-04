@@ -29,17 +29,21 @@ fi
 expected=$(mktemp)
 trap 'rm -f "$expected"' EXIT
 
-# Enumerate first: a failing git inside a process substitution would be
-# indistinguishable from "no files" and pass the gate.
-sources=$(git ls-files -- '*.c' '*.h') || exit 2
-if [ -z "$sources" ]; then
+# Enumerate first, NUL-delimited: a failing git inside a process substitution
+# would be indistinguishable from "no files" and pass the gate.
+list=$(mktemp)
+trap 'rm -f "$expected" "$list"' EXIT
+git ls-files -z -- '*.c' '*.h' > "$list" || exit 2
+if [ ! -s "$list" ]; then
     echo "Error: no C sources tracked; the pathspec no longer matches" >&2
     exit 2
 fi
 
 # A tool failure (2) outranks a style difference (1).
 rc=0
-for file in $sources; do
+while IFS= read -r -d '' file; do
+    # A tracked file deleted from the worktree is not a style defect.
+    [ -e "$file" ] || continue
     if ! "$CLANG_FORMAT" "$file" > "$expected"; then
         echo "Error: $CLANG_FORMAT failed on $file" >&2
         rc=2
@@ -53,6 +57,6 @@ for file in $sources; do
     elif [ "$st" -eq 1 ] && [ "$rc" -eq 0 ]; then
         rc=1
     fi
-done
+done < "$list"
 
 exit "$rc"

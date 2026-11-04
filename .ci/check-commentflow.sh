@@ -36,12 +36,15 @@ fi
 # Untracked but non-ignored files are included, so a new file is covered before
 # it is staged. A while-read loop because macOS ships bash 3.2 (no mapfile).
 # Enumerated before the loop so a failing git is an error, not an empty list.
-list=$(git ls-files -z --cached --others --exclude-standard \
-    -- '*.c' '*.h' '*.sh' | tr '\0' '\n') || exit 2
+list=$(mktemp)
+trap 'rm -f "$list"' EXIT
+git ls-files -z --cached --others --exclude-standard \
+    -- '*.c' '*.h' '*.sh' > "$list" || exit 2
 files=()
-while IFS= read -r f; do
-    [ -n "$f" ] && files+=("$f")
-done <<< "$list"
+while IFS= read -r -d '' f; do
+    # A tracked file deleted from the worktree is not a reflow target.
+    [ -e "$f" ] && files+=("$f")
+done < "$list"
 
 if [ "${#files[@]}" -eq 0 ]; then
     echo "Error: no files selected; the pathspec no longer matches the tree" >&2

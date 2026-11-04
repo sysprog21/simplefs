@@ -51,7 +51,7 @@ jobs:
         run: .ci/check-commentflow.sh
       # The major version must match the one .ci/check-format.sh requires.
       - name: install clang-format 20
-        run: pipx install 'clang-format==20.*'
+        run: pipx install 'clang-format==20.1.8'
       - name: clang-format
         run: .ci/check-format.sh
 
