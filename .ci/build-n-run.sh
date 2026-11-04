@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 function build_mod()
-{   
+{
     make all || exit 1
 }
 

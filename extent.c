@@ -3,8 +3,8 @@
 
 #include "simplefs.h"
 
-/* Search for the extent containing the target block. Binary search is used
- * for efficiency.
+/* Search for the extent containing the target block. Binary search is used for
+ * efficiency.
  *
  * Returns the first unused file index if not found.
  * Returns -1 if the target block is out of range.
@@ -12,9 +12,9 @@
 uint32_t simplefs_ext_search(struct simplefs_file_ei_block *index,
                              uint32_t iblock)
 {
-    /* First, find the first unused file index with binary search.
-     * It will be our right boundary for actual binary search and the return
-     * value when the file index is not found.
+    /* First, find the first unused file index with binary search. It will be
+     * our right boundary for actual binary search and the return value when the
+     * file index is not found.
      */
     uint32_t start = 0;
     uint32_t end = SIMPLEFS_MAX_EXTENTS - 1;

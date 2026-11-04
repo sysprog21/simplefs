@@ -13,7 +13,8 @@ test_too_large_file() {
 }
 
 # Write the file size larger than BLOCK_SIZE
-# test serial to write
+#
+# Test serial to write
 test_file_size_larger_than_block_size() {
     test_op 'yes 123456789 | head -n 1600 | tr -d "\n" > exceed_blk.txt'
     echo

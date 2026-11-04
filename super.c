@@ -24,8 +24,8 @@ struct dentry *simplefs_mount(struct file_system_type *fs_type,
 void simplefs_kill_sb(struct super_block *sb);
 static struct kmem_cache *simplefs_inode_cache;
 
-/* Needed to initiate the inode cache, to allow us to attach
- * filesystem-specific inode information.
+/* Needed to initiate the inode cache, to allow us to attach filesystem-specific
+ * inode information.
  */
 int simplefs_init_inode_cache(void)
 {
@@ -352,13 +352,13 @@ static journal_t *simplefs_get_dev_journal(struct super_block *sb,
         errno = -EINVAL;
         goto out_bdev;
     }
-    /*
-     * FIXME: Currently, the exact size of the external journal device is not
+
+    /* FIXME: Currently, the exact size of the external journal device is not
      * available. Therefore, we use the device size divided by the block size to
      * set `len`. Hint: External device size available now is 8MB.
      *
-     * Future implementation might need to change to:
-     * len = CapacityOfJournalDevice / SIMPLEFS_BLOCK_SIZE
+     * Future implementation might need to compute len as
+     * CapacityOfJournalDevice divided by SIMPLEFS_BLOCK_SIZE.
      */
 
     len = 2048;

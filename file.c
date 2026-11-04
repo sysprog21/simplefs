@@ -112,8 +112,8 @@ static int simplefs_writepage(struct page *page, struct writeback_control *wbc)
 #endif
 
 /* Called by the VFS when a write() syscall is made on a file, before writing
- * the data into the page cache. This function checks if the write operation
- * can complete and allocates the necessary blocks through block_write_begin().
+ * the data into the page cache. This function checks if the write operation can
+ * complete and allocates the necessary blocks through block_write_begin().
  */
 #if SIMPLEFS_AT_LEAST(6, 15, 0)
 static int simplefs_write_begin(const struct kiocb *iocb,
@@ -299,11 +299,10 @@ end:
     return ret;
 }
 
-/*
- * Called when a file is opened in the simplefs.
- * It checks the flags associated with the file opening mode (O_WRONLY, O_RDWR,
- * O_TRUNC) and performs truncation if the file is being opened for write or
- * read/write and the O_TRUNC flag is set.
+/* Called when a file is opened in the simplefs. It checks the flags associated
+ * with the file opening mode (O_WRONLY, O_RDWR, O_TRUNC) and performs
+ * truncation if the file is being opened for write or read/write and the
+ * O_TRUNC flag is set.
  *
  * Truncation is achieved by reading the file's index block from disk, iterating
  * over the data block pointers, releasing the associated data blocks, and
