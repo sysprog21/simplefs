@@ -421,6 +421,9 @@ static ssize_t simplefs_write(struct file *file,
     ssize_t bytes_write = 0;
     loff_t pos = *ppos;
 
+    /* A zero-byte write makes callers such as dd retry forever. */
+    if (len && pos >= SIMPLEFS_MAX_FILESIZE)
+        return -EFBIG;
     if (pos > inode->i_size)
         return 0;
     len = min_t(size_t, len, SIMPLEFS_MAX_FILESIZE - pos);
