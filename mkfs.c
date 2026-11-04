@@ -110,10 +110,9 @@ static int write_inode_store(int fd, struct superblock *sb)
                                 le32toh(sb->info.nr_ifree_blocks) +
                                 le32toh(sb->info.nr_istore_blocks);
 
-    /* Designate inode 1 as the root inode.
-     * When the system uses the glibc, the readdir function will skip over
-     * inode 0. Additionally, the VFS layer avoids using inode 0 to prevent
-     * potential issues.
+    /* Designate inode 1 as the root inode. When the system uses the glibc, the
+     * readdir function will skip over inode 0. Additionally, the VFS layer
+     * avoids using inode 0 to prevent potential issues.
      */
     inode += 1;
     inode->i_mode = htole32(S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH | S_IWUSR |

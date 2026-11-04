@@ -7,8 +7,8 @@
 
 #include "simplefs.h"
 
-/* Iterate over the files contained in dir and commit them to @ctx.
- * This function is called by the VFS as ctx->pos changes.
+/* Iterate over the files contained in dir and commit them to @ctx. This
+ * function is called by the VFS as ctx->pos changes.
  * Returns 0 on success.
  */
 static int simplefs_iterate(struct file *dir, struct dir_context *ctx)
@@ -26,8 +26,8 @@ static int simplefs_iterate(struct file *dir, struct dir_context *ctx)
     if (!S_ISDIR(inode->i_mode))
         return -ENOTDIR;
 
-    /* Check that ctx->pos is not bigger than what we can handle (including
-     * . and ..)
+    /* Check that ctx->pos is not bigger than what we can handle (including .
+     * and ..)
      */
     if (ctx->pos > SIMPLEFS_MAX_SUBFILES + 2)
         return 0;

@@ -68,8 +68,7 @@ struct simplefs_inode {
 #define SIMPLEFS_LESS_EQUAL(major, minor, rev) \
     (LINUX_VERSION_CODE <= KERNEL_VERSION(major, minor, rev))
 
-/* A 'container' structure that keeps the VFS inode and additional on-disk
- * data.
+/* A 'container' structure that keeps the VFS inode and additional on-disk data.
  */
 struct simplefs_inode_info {
     uint32_t ei_block; /* Block with list of extents for this file */

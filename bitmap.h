@@ -5,11 +5,12 @@
 
 #include "simplefs.h"
 
-/* Returns the first bit found and clears the following 'len' consecutive
- * free bits (sets them to 1) in a given in-memory bitmap spanning multiple
- * blocks. Returns 0 if an adequate number of free bits were not found.
- * Assumes the first bit is never free (reserved for the superblock and the
- * root inode), allowing the use of 0 as an error value.
+/* Returns the first bit found and clears the following 'len' consecutive free
+ * bits (sets them to 1) in a given in-memory bitmap spanning multiple blocks.
+ *
+ * Returns 0 if an adequate number of free bits were not found. Assumes the
+ * first bit is never free (reserved for the superblock and the root inode),
+ * allowing the use of 0 as an error value.
  */
 static inline uint32_t get_first_free_bits(unsigned long *freemap,
                                            unsigned long size,
@@ -39,8 +40,8 @@ static inline uint32_t get_free_inode(struct simplefs_sb_info *sbi)
     return ret;
 }
 
-/* Return 'len' unused block(s) number and mark it used.
- * Clean the block content.
+/* Return 'len' unused block(s) number and mark it used. Clean the block
+ * content.
  * Return 0 if no enough free block(s) were found.
  */
 static inline uint32_t get_free_blocks(struct super_block *sb, uint32_t len)

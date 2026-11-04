@@ -22,8 +22,9 @@ static const struct inode_operations symlink_inode_ops;
         brelse(bh);             \
         bh = NULL;              \
     } while (0)
-/* Either return the inode that corresponds to a given inode number (ino), if
- * it is already in the cache, or create a new inode object if it is not in the
+
+/* Either return the inode that corresponds to a given inode number (ino), if it
+ * is already in the cache, or create a new inode object if it is not in the
  * cache.
  *
  * Note that this function is very similar to simplefs_new_inode, except that
@@ -54,9 +55,10 @@ struct inode *simplefs_iget(struct super_block *sb, unsigned long ino)
     /* If inode is in cache, return it */
 #if SIMPLEFS_AT_LEAST(6, 19, 0)
     if (!(inode_state_read_once(inode) & I_NEW))
-/* inode->i_state is struct inode_state_flags in kernels v6.19 +,
- * and inode_state_read_once returns __state from the state flag
- * structure which is enum
+
+/* inode->i_state is struct inode_state_flags in kernels v6.19 +, and
+ * inode_state_read_once returns __state from the state flag structure which is
+ * enum
  */
 #else
     if (!(inode->i_state & I_NEW))
@@ -202,9 +204,8 @@ file_search_end:
     return ret;
 }
 
-/* Search for a dentry in dir.
- * Fills dentry with NULL if not found in dir, or with the corresponding inode
- * if found.
+/* Search for a dentry in dir. Fills dentry with NULL if not found in dir, or
+ * with the corresponding inode if found.
  * Returns NULL on success, indicating the dentry was successfully filled or
  * confirmed absent.
  */
@@ -219,7 +220,8 @@ static struct dentry *simplefs_lookup(struct inode *dir,
     int ei, bi, fi, chk;
 
     /* Check filename length less than SIMPLEFS_FILENAME_LEN - 1, the last
-     * character is for null terminator */
+     * character is for null terminator
+     */
     if (dentry->d_name.len >= SIMPLEFS_FILENAME_LEN)
         return ERR_PTR(-ENAMETOOLONG);
 
@@ -421,13 +423,17 @@ static int simplefs_get_new_ext(struct super_block *sb,
 
     eblock->extents[ei].ee_start = bno;
     eblock->extents[ei].ee_len = SIMPLEFS_MAX_BLOCKS_PER_EXTENT;
+
     /* ee_block is only used for file extent search, not for directory extents.
-     * Set to 0 as directory operations rely solely on ee_start and ee_len. */
+     * Set to 0 as directory operations rely solely on ee_start and ee_len.
+     */
     eblock->extents[ei].ee_block = 0;
     eblock->extents[ei].nr_files = 0;
 
-    /* clear the ext block*/
-    /* TODO: fix from 8 to dynamic value */
+    /* Clear the ext block.
+     *
+     * TODO: fix from 8 to dynamic value
+     */
     for (bi = 0; bi < eblock->extents[ei].ee_len; bi++) {
         bh = sb_bread(sb, eblock->extents[ei].ee_start + bi);
         if (!bh)
@@ -545,7 +551,8 @@ static int simplefs_create(struct inode *dir,
     int bi = 0, idx_bi;
 
     /* Check filename length less than SIMPLEFS_FILENAME_LEN - 1, the last
-     * character is for null terminator */
+     * character is for null terminator
+     */
     if (strlen(dentry->d_name.name) >= SIMPLEFS_FILENAME_LEN)
         return -ENAMETOOLONG;
 
@@ -570,8 +577,8 @@ static int simplefs_create(struct inode *dir,
         goto end;
     }
 
-    /* Scrub ei_block for new file/directory to avoid previous data
-     * messing with new file/directory.
+    /* Scrub ei_block for new file/directory to avoid previous data messing with
+     * new file/directory.
      */
     bh2 = sb_bread(sb, SIMPLEFS_INODE(inode)->ei_block);
     if (!bh2) {
@@ -607,8 +614,10 @@ static int simplefs_create(struct inode *dir,
         alloc = true;
     }
 
-    /* TODO: fix from 8 to dynamic value */
-    /* Find which simplefs_dir_block has free space */
+    /* Find which simplefs_dir_block has free space.
+     *
+     * TODO: fix from 8 to dynamic value
+     */
     bi = hash_code % eblock->extents[avail].ee_len;
     for (idx_bi = 0; idx_bi < eblock->extents[avail].ee_len; bi++, idx_bi++) {
         CHECK_AND_SET_RING_INDEX(bi, eblock->extents[avail].ee_len);
@@ -742,8 +751,8 @@ end_ret:
     return ret;
 }
 
-/* Remove a link for a file including the reference in the parent directory.
- * If link count is 0, destroy file in this way:
+/* Remove a link for a file including the reference in the parent directory. If
+ * link count is 0, destroy file in this way:
  *   - remove the file from its parent directory.
  *   - cleanup blocks containing data
  *   - cleanup file index block
@@ -808,9 +817,9 @@ static int simplefs_unlink(struct inode *dir, struct dentry *dentry)
 
     /* Cleans up pointed blocks when unlinking a file. If reading the index
      * block fails, the inode is cleaned up regardless, resulting in the
-     * permanent loss of this file's blocks. If scrubbing a data block fails,
-     * do not terminate the operation (as it is already too late); instead,
-     * release the block and proceed.
+     * permanent loss of this file's blocks. If scrubbing a data block fails, do
+     * not terminate the operation (as it is already too late); instead, release
+     * the block and proceed.
      */
     bno = SIMPLEFS_INODE(inode)->ei_block;
     bh = sb_bread(sb, bno);
@@ -996,8 +1005,9 @@ static int simplefs_rename(struct inode *src_dir,
             mark_buffer_dirty(dest_ei_bh);
             /* Track that we inserted the file for cleanup on error */
             dest_inserted = 1;
-            /* Hold dest_bi_bh until the source is removed successfully or
-             * the operation is rolled back.
+
+            /* Hold dest_bi_bh until the source is removed successfully or the
+             * operation is rolled back.
              */
             break;
         }
@@ -1206,8 +1216,10 @@ static int simplefs_link(struct dentry *src_dentry,
         alloc = true;
     }
 
-    /* TODO: fix from 8 to dynamic value */
-    /* Find which simplefs_dir_block has free space */
+    /* Find which simplefs_dir_block has free space.
+     *
+     * TODO: fix from 8 to dynamic value
+     */
     bi = hash_code % eblock->extents[avail].ee_len;
     for (idx_bi = 0; idx_bi < eblock->extents[avail].ee_len; bi++, idx_bi++) {
         CHECK_AND_SET_RING_INDEX(bi, eblock->extents[avail].ee_len);
@@ -1323,8 +1335,10 @@ static int simplefs_symlink(struct inode *dir,
         alloc = true;
     }
 
-    /* TODO: fix from 8 to dynamic value */
-    /* Find which simplefs_dir_block has free space */
+    /* Find which simplefs_dir_block has free space.
+     *
+     * TODO: fix from 8 to dynamic value
+     */
     bi = hash_code % eblock->extents[avail].ee_len;
     for (idx_bi = 0; idx_bi < eblock->extents[avail].ee_len; bi++, idx_bi++) {
         CHECK_AND_SET_RING_INDEX(bi, eblock->extents[avail].ee_len);

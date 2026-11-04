@@ -44,10 +44,15 @@ However, participation requires adherence to fundamental ground rules:
   This variant should be considered the standard for all documentation efforts.
   For instance, opt for "initialize" over "initialise" and "color" rather than "colour".
 
-Software requirement: [clang-format](https://clang.llvm.org/docs/ClangFormat.html) version 18 or later.
+Software requirements:
+* [clang-format](https://clang.llvm.org/docs/ClangFormat.html) version 20.
+  `.ci/check-format.sh` rejects other versions, because their output differs.
+* [commentflow](https://github.com/sysprog21/commentflow), which reflows comments to the column limit.
+  Do not hand-wrap comment text; run `.ci/check-commentflow.sh --write` and let it place the breaks.
 
 This repository consistently contains an up-to-date `.clang-format` file with rules that match the explained ones.
-For maintaining a uniform coding style, execute the command `clang-format -i *.{c,h}`.
+For maintaining a uniform coding style, run `.ci/check-commentflow.sh --write` first, then clang-format 20 (`-i *.{c,h}`).
+The order matters: clang-format never refills a short-wrapped comment, and commentflow settles that before clang-format normalizes indentation.
 
 ## Coding Style for Modern C
 

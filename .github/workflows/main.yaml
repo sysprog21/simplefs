@@ -2,37 +2,64 @@ name: main
 
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   simplefs:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - name: install-dependencies
-      run: |
-            sudo apt-get install build-essential
-    - name: automated test
-      run: |
-          .ci/build-n-run.sh
-      shell: bash
-
-  coding_style:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: checkout code
-        uses: actions/checkout@v4
-      - name: coding convention
-        run: |
-            sudo apt-get install -q -y clang-format
-            .ci/check-newline.sh
-            .ci/check-format.sh
+        uses: actions/checkout@v7
+      - name: install dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential
+      - name: automated test
+        run: .ci/build-n-run.sh
         shell: bash
+
+  coding_style:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v7
+      - name: newline at end of file
+        run: .ci/check-newline.sh
+      # commentflow ships as a release binary, not an apt package. The bytes
+      # are checked against the sha256 GitHub records for the asset, read from
+      # the API in the same step, so no hash is kept in this file.
+      - name: install commentflow
+        env:
+          ASSET: commentflow-x86_64-unknown-linux-gnu.tar.gz
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          meta=$(gh api repos/sysprog21/commentflow/releases/tags/latest)
+          read -r digest url < <(jq -r --arg n "$ASSET" \
+            '.assets[] | select(.name == $n) | "\(.digest) \(.browser_download_url)"' <<< "$meta")
+          if [ -z "${digest:-}" ] || [ -z "${url:-}" ] || [ "$digest" = null ]; then
+            echo "no digest or download URL recorded for $ASSET" >&2
+            exit 1
+          fi
+          curl -fsSL -o /tmp/commentflow.tar.gz "$url"
+          echo "${digest#sha256:}  /tmp/commentflow.tar.gz" | sha256sum -c -
+          sudo tar -xzf /tmp/commentflow.tar.gz -C /usr/local/bin commentflow
+      - name: comment reflow
+        run: .ci/check-commentflow.sh
+      # The major version must match the one .ci/check-format.sh requires.
+      - name: install clang-format 20
+        run: pipx install 'clang-format==20.*'
+      - name: clang-format
+        run: .ci/check-format.sh
 
   mkfs_macos:
     runs-on: macos-latest
     steps:
       - name: checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: test mkfs.simplefs on macOS
-        run: |
-            .ci/test-mkfs-macos.sh
+        run: .ci/test-mkfs-macos.sh
         shell: bash
