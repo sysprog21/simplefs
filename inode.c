@@ -51,7 +51,7 @@ struct inode *simplefs_iget(struct super_block *sb, unsigned long ino)
     if (!inode)
         return ERR_PTR(-ENOMEM);
 
-        /* If inode is in cache, return it */
+    /* If inode is in cache, return it */
 #if SIMPLEFS_AT_LEAST(6, 19, 0)
     if (!(inode_state_read_once(inode) & I_NEW))
 /* inode->i_state is struct inode_state_flags in kernels v6.19 +,
@@ -784,7 +784,7 @@ static int simplefs_unlink(struct inode *dir, struct dentry *dentry)
     if (S_ISLNK(inode->i_mode))
         goto clean_inode;
 
-        /* Update inode stats */
+    /* Update inode stats */
 #if SIMPLEFS_AT_LEAST(6, 7, 0)
     simple_inode_init_ts(dir);
 #elif SIMPLEFS_AT_LEAST(6, 6, 0)

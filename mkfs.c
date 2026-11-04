@@ -61,7 +61,7 @@ static struct superblock *write_superblock(int fd, struct stat *fstats)
         nr_blocks - nr_istore_blocks - nr_ifree_blocks - nr_bfree_blocks;
 
     memset(sb, 0, sizeof(struct superblock));
-    sb->info = (struct simplefs_sb_info){
+    sb->info = (struct simplefs_sb_info) {
         .magic = htole32(SIMPLEFS_MAGIC),
         .nr_blocks = htole32(nr_blocks),
         .nr_inodes = htole32(nr_inodes),
