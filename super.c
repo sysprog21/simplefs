@@ -75,6 +75,9 @@ static int simplefs_write_inode(struct inode *inode,
     uint32_t inode_block = (ino / SIMPLEFS_INODES_PER_BLOCK) + 1;
     uint32_t inode_shift = ino % SIMPLEFS_INODES_PER_BLOCK;
 
+    if (sb_rdonly(inode->i_sb))
+        return 0;
+
     if (ino >= sbi->nr_inodes)
         return 0;
 
